@@ -1,16 +1,3 @@
-// // src/App.tsx
-// import { Box, Heading, Text, Button } from '@chakra-ui/react'
-
-// export default function App() {
-//   return (
-//     <Box p={8}>
-//       <Heading mb={4}>Hello!</Heading>
-//       <Text mb={4}>How are you.</Text>
-//       <Button colorScheme="red">SOS</Button>
-//     </Box>
-//   )
-// }
-
 import { useEffect, useState } from 'react'
 import { Box, Heading, Text, Button, VStack } from '@chakra-ui/react'
 import { api } from './api'
