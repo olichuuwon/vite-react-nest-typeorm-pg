@@ -1,0 +1,22 @@
+{
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll": "always",
+    "source.fixAll.eslint": "always"
+  },
+
+  // Optional but recommended
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact"
+  ],
+
+  // Ensure ESlint + Prettier work nicely together
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+
+  // Remove unused imports & vars automatically
+  "editor.renderWhitespace": "selection",
+  "files.eol": "\n"
+}
