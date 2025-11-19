@@ -1,8 +1,9 @@
-# trackr-lite
+# Stalkr/trackr-lite
 
-stack: vite-react-nest-typeorm-pg 
+stack: vite-react-nest-typeorm-pg
 
 under my-app
+
 - .husky for formatting checks before commits
 - public for svg icon
 - server for backend nest
@@ -13,6 +14,7 @@ under my-app
 - src/main.tsx
 
 app planning
+
 - activity, attendence and users with crud
 - create activity and add attendence records for users
 
@@ -21,4 +23,3 @@ activity attributes:
 user attributes:
 
 attendence record attributes:
-
