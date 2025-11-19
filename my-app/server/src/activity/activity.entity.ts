@@ -22,6 +22,9 @@ export class Activity {
   @Column({ type: 'text', nullable: true })
   description?: string
 
+  @Column({ type: 'date', nullable: true })
+  date?: string
+
   @Column({ type: 'timestamptz', nullable: true })
   startAt?: Date
 

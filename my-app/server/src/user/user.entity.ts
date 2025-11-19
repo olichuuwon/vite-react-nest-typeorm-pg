@@ -9,7 +9,7 @@ import {
 import { AttendanceRecord } from '../attendance/attendance.entity'
 import { Activity } from '../activity/activity.entity'
 
-export type UserRole = 'admin' | 'user'
+export type UserRole = 'admin' | 'member'
 
 @Entity('users')
 export class User {
