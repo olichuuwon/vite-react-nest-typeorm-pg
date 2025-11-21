@@ -1,4 +1,3 @@
-// auth.module.ts
 import { Module } from "@nestjs/common";
 import { JwtModule, type JwtModuleOptions } from "@nestjs/jwt";
 import { PassportModule } from "@nestjs/passport";
