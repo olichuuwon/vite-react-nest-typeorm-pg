@@ -7,51 +7,51 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Unique,
-} from 'typeorm'
-import { Activity } from '../activity/activity.entity'
-import { User } from '../user/user.entity'
+} from "typeorm";
+import { Activity } from "../activity/activity.entity";
+import { User } from "../user/user.entity";
 
-export type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused'
+export type AttendanceStatus = "present" | "absent" | "late" | "excused";
 
-@Entity('attendance_records')
-@Unique(['activityId', 'userId'])
+@Entity("attendance_records")
+@Unique(["activityId", "userId"])
 export class AttendanceRecord {
-  @PrimaryGeneratedColumn('uuid')
-  id: string
+  @PrimaryGeneratedColumn("uuid")
+  id: string;
 
   @ManyToOne(() => Activity, (activity) => activity.attendanceRecords, {
-    onDelete: 'CASCADE',
+    onDelete: "CASCADE",
   })
-  @JoinColumn({ name: 'activityId' })
-  activity: Activity
+  @JoinColumn({ name: "activityId" })
+  activity: Activity;
 
-  @Column({ type: 'uuid' })
-  activityId: string
+  @Column({ type: "uuid" })
+  activityId: string;
 
   @ManyToOne(() => User, (user) => user.attendanceRecords, {
-    onDelete: 'CASCADE',
+    onDelete: "CASCADE",
   })
-  @JoinColumn({ name: 'userId' })
-  user: User
+  @JoinColumn({ name: "userId" })
+  user: User;
 
-  @Column({ type: 'uuid' })
-  userId: string
+  @Column({ type: "uuid" })
+  userId: string;
 
-  @Column({ type: 'varchar', default: 'present' })
-  status: AttendanceStatus
+  @Column({ type: "varchar", default: "present" })
+  status: AttendanceStatus;
 
-  @Column({ type: 'timestamptz', nullable: true })
-  checkedInAt?: Date
+  @Column({ type: "timestamptz", nullable: true })
+  checkedInAt?: Date;
 
-  @Column({ type: 'timestamptz', nullable: true })
-  checkedOutAt?: Date
+  @Column({ type: "timestamptz", nullable: true })
+  checkedOutAt?: Date;
 
-  @Column({ type: 'text', nullable: true })
-  remarks?: string
+  @Column({ type: "text", nullable: true })
+  remarks?: string;
 
   @CreateDateColumn()
-  createdAt: Date
+  createdAt: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date
+  updatedAt: Date;
 }
