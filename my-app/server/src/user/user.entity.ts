@@ -1,42 +1,13 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  OneToMany,
-} from 'typeorm'
-import { AttendanceRecord } from '../attendance/attendance.entity'
-import { Activity } from '../activity/activity.entity'
+import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm'
 
-export type UserRole = 'admin' | 'member'
-
-@Entity('users')
+@Entity()
 export class User {
-  @PrimaryGeneratedColumn('uuid')
-  id: string
+  @PrimaryGeneratedColumn()
+  id: number
 
   @Column({ length: 100 })
   name: string
 
   @Column({ unique: true })
-  identifier: string
-
-  @Column({ unique: true, nullable: true })
-  email?: string
-
-  @Column({ type: 'varchar', default: 'member' })
-  role: UserRole
-
-  @OneToMany(() => AttendanceRecord, (att) => att.user)
-  attendanceRecords: AttendanceRecord[]
-
-  @OneToMany(() => Activity, (activity) => activity.createdBy)
-  createdActivities: Activity[]
-
-  @CreateDateColumn()
-  createdAt: Date
-
-  @UpdateDateColumn()
-  updatedAt: Date
+  email: string
 }
