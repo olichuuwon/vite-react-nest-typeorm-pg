@@ -39,8 +39,10 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     if (storedUser) {
       try {
         setUser(JSON.parse(storedUser) as UserDto)
-      } catch {
-        console.log('Stored user is invalid JSON')
+      } catch (err) {
+        console.warn('Failed to parse stored user', err)
+        localStorage.removeItem(USER_STORAGE_KEY)
+        console.warn('User storage key cleared', err)
       }
     }
 
