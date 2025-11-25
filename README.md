@@ -156,6 +156,7 @@ npm run dev
 **Status:** 🟢 _Completed_
 
 - [x] Set up React Router
+
   - `/login`
   - `/activities`
   - `/activities/:activityId`
@@ -176,6 +177,7 @@ npm run dev
 **Status:** 🟢 _Completed_
 
 - [x] Create `AuthContext`
+
   - `user`
   - `token`
   - `login()`, `logout()`
