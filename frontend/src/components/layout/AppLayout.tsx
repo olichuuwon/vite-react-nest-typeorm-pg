@@ -1,6 +1,6 @@
 import { Outlet, NavLink } from 'react-router-dom'
 import { Box, Flex, Heading, Link, VStack, HStack, Spacer, Text, Button } from '@chakra-ui/react'
-import { useAuth } from '../../features/auth/AuthContext'
+import { useAuth } from '../../context/AuthContext'
 
 export const AppLayout = () => {
   const { user, logout } = useAuth()
