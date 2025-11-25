@@ -12,27 +12,20 @@ export class AuthService {
     private readonly jwtService: JwtService
   ) {}
 
-  async validateOrCreateUserByIdentifier(identifier: string): Promise<User> {
-    let user = await this.userRepo.findOne({ where: { identifier } });
-
-    if (!user) {
-      user = this.userRepo.create({
-        identifier,
-        name: identifier,
-        role: "member",
-      });
-      user = await this.userRepo.save(user);
-    }
-
-    return user;
-  }
-
   async loginWithIdentifier(identifier: string) {
-    if (!identifier) {
+    const trimmed = identifier?.trim();
+
+    if (!trimmed) {
       throw new UnauthorizedException("Identifier is required");
     }
 
-    const user = await this.validateOrCreateUserByIdentifier(identifier);
+    const user = await this.userRepo.findOne({
+      where: { identifier: trimmed },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException("Invalid identifier");
+    }
 
     const payload = {
       sub: user.id,
@@ -48,6 +41,7 @@ export class AuthService {
         id: user.id,
         name: user.name,
         identifier: user.identifier,
+        email: user.email ?? null,
         role: user.role,
       },
     };
