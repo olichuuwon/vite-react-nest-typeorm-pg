@@ -1,56 +1,95 @@
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useCallback,
-  type PropsWithChildren,
-} from 'react'
-
-type User = {
-  id: string
-  name: string
-  role: 'admin' | 'member'
-}
+import { createContext, useContext, useEffect, useState, type PropsWithChildren } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { api, setAuthToken } from './../../api/client'
+import type { UserDto, LoginResponseDto } from './../../../../shared/dto/auth.dto' // adjust path if needed
 
 type AuthContextValue = {
-  user: User | null
+  user: UserDto | null
   token: string | null
   isAuthenticated: boolean
   isLoading: boolean
-  login: (identifier: string) => Promise<void>
+  login: (identifier: string) => Promise<LoginResponseDto>
   logout: () => void
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
+const TOKEN_STORAGE_KEY = 'app_token'
+const USER_STORAGE_KEY = 'app_user'
+
 export const AuthProvider = ({ children }: PropsWithChildren) => {
-  const [user, setUser] = useState<User | null>(null)
   const [token, setToken] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [user, setUser] = useState<UserDto | null>(null)
+  const [isHydrating, setIsHydrating] = useState(true)
+
+  const queryClient = useQueryClient()
 
   useEffect(() => {
-    // Minimal skeleton: no saved token check yet
-    setIsLoading(false)
+    const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY)
+    const storedUser = localStorage.getItem(USER_STORAGE_KEY)
+
+    if (storedToken) {
+      setToken(storedToken)
+      setAuthToken(storedToken)
+    }
+
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser) as UserDto)
+      } catch {
+        console.log('Stored user is invalid JSON')
+      }
+    }
+
+    setIsHydrating(false)
   }, [])
 
-  const login = useCallback(async () => {
-    // TODO: Replace with real authentication logic
-    setUser({ id: '1', name: 'Demo User', role: 'admin' })
-    setToken('fake-token')
-  }, [])
+  const loginMutation = useMutation<LoginResponseDto, unknown, string>({
+    mutationFn: async (identifier: string) => {
+      const trimmed = identifier.trim()
+      if (!trimmed) {
+        throw new Error('Identifier is required')
+      }
 
-  const logout = useCallback(() => {
-    setUser(null)
+      const res = await api.post<LoginResponseDto>('/auth/login', {
+        identifier: trimmed,
+      })
+
+      return res.data
+    },
+    onSuccess: ({ accessToken, user }) => {
+      setToken(accessToken)
+      setUser(user)
+
+      localStorage.setItem(TOKEN_STORAGE_KEY, accessToken)
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user))
+
+      setAuthToken(accessToken)
+
+      // new session -> clear stale cache
+      queryClient.clear()
+    },
+  })
+
+  const login = (identifier: string) => loginMutation.mutateAsync(identifier)
+
+  const logout = () => {
     setToken(null)
-  }, [])
+    setUser(null)
+    localStorage.removeItem(TOKEN_STORAGE_KEY)
+    localStorage.removeItem(USER_STORAGE_KEY)
+    setAuthToken(null)
+    queryClient.clear()
+  }
+
+  const isLoading = isHydrating || loginMutation.isPending
 
   return (
     <AuthContext.Provider
       value={{
         user,
         token,
-        isAuthenticated: !!user,
+        isAuthenticated: !!token,
         isLoading,
         login,
         logout,
