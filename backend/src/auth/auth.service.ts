@@ -1,8 +1,9 @@
 import { Injectable, UnauthorizedException } from "@nestjs/common";
-import { JwtService } from "@nestjs/jwt";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
+import { JwtService } from "@nestjs/jwt";
 import { User } from "../user/user.entity";
+import type { LoginResponseDto, UserDto } from "../../../shared/dto/auth.dto";
 
 @Injectable()
 export class AuthService {
@@ -12,8 +13,18 @@ export class AuthService {
     private readonly jwtService: JwtService
   ) {}
 
-  async loginWithIdentifier(identifier: string) {
-    const trimmed = identifier?.trim();
+  private toUserDto(user: User): UserDto {
+    return {
+      id: user.id,
+      name: user.name,
+      identifier: user.identifier,
+      email: user.email ?? null,
+      role: user.role,
+    };
+  }
+
+  async login(identifier: string): Promise<LoginResponseDto> {
+    const trimmed = identifier.trim();
 
     if (!trimmed) {
       throw new UnauthorizedException("Identifier is required");
@@ -27,23 +38,19 @@ export class AuthService {
       throw new UnauthorizedException("Invalid identifier");
     }
 
-    const payload = {
-      sub: user.id,
-      identifier: user.identifier,
-      role: user.role,
-    };
-
+    const payload = { sub: user.id, role: user.role };
     const accessToken = await this.jwtService.signAsync(payload);
 
     return {
       accessToken,
-      user: {
-        id: user.id,
-        name: user.name,
-        identifier: user.identifier,
-        email: user.email ?? null,
-        role: user.role,
-      },
+      user: this.toUserDto(user),
     };
+  }
+
+  async getMe(userId: string): Promise<UserDto> {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) throw new UnauthorizedException();
+
+    return this.toUserDto(user);
   }
 }
