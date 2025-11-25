@@ -1,8 +1,9 @@
 import { createContext, useContext, useEffect, useState, type PropsWithChildren } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useToast } from '@chakra-ui/react'
-import { api, setAuthToken } from './../../api/client'
-import type { UserDto, LoginResponseDto } from './../../../../shared/dto/auth.dto'
+import { setAuthToken } from '../api/client'
+import { loginWithIdentifier } from '../api/auth'
+import type { UserDto, LoginResponseDto } from '../../../shared/dto/auth.dto'
 
 type AuthContextValue = {
   user: UserDto | null
@@ -46,19 +47,8 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     setIsHydrating(false)
   }, [])
 
-  const loginMutation = useMutation<LoginResponseDto, unknown, string>({
-    mutationFn: async (identifier: string) => {
-      const trimmed = identifier.trim()
-      if (!trimmed) {
-        throw new Error('Identifier is required')
-      }
-
-      const res = await api.post<LoginResponseDto>('/auth/login', {
-        identifier: trimmed,
-      })
-
-      return res.data
-    },
+  const loginMutation = useMutation({
+    mutationFn: loginWithIdentifier,
     onSuccess: ({ accessToken, user }) => {
       setToken(accessToken)
       setUser(user)
@@ -67,7 +57,6 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user))
 
       setAuthToken(accessToken)
-
       queryClient.clear()
 
       toast({
