@@ -1,35 +1,45 @@
-import { Test, TestingModule } from "@nestjs/testing";
-import { AttendanceService } from "./attendance.service";
-import { getRepositoryToken } from "@nestjs/typeorm";
-import { AttendanceRecord } from "./attendance.entity";
+import { NotFoundException } from "@nestjs/common";
 import { Repository } from "typeorm";
-import { createMockAttendance } from "../test-utils/entities";
+import { AttendanceService } from "./attendance.service";
+import { AttendanceRecord } from "./attendance.entity";
+import { User } from "../user/user.entity";
+import { Activity } from "../activity/activity.entity";
 
-const mockRepo = () => ({
-  find: jest.fn(),
-  findOne: jest.fn(),
-  create: jest.fn(),
-  save: jest.fn(),
-  delete: jest.fn(),
-});
+const createAttendanceRepo = () =>
+  ({
+    find: jest.fn(),
+    findOne: jest.fn(),
+    create: jest.fn(),
+    save: jest.fn(),
+    delete: jest.fn(),
+  }) as any;
+
+const createUserRepo = () =>
+  ({
+    findOne: jest.fn(),
+  }) as any;
+
+const createActivityRepo = () =>
+  ({
+    findOne: jest.fn(),
+  }) as any;
 
 describe("AttendanceService", () => {
   let service: AttendanceService;
-  let repo: jest.Mocked<Repository<AttendanceRecord>>;
+  let attendanceRepo: any;
+  let userRepo: any;
+  let activityRepo: any;
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        AttendanceService,
-        {
-          provide: getRepositoryToken(AttendanceRecord),
-          useFactory: mockRepo,
-        },
-      ],
-    }).compile();
+  beforeEach(() => {
+    attendanceRepo = createAttendanceRepo();
+    userRepo = createUserRepo();
+    activityRepo = createActivityRepo();
 
-    service = module.get<AttendanceService>(AttendanceService);
-    repo = module.get(getRepositoryToken(AttendanceRecord));
+    service = new AttendanceService(
+      attendanceRepo as Repository<AttendanceRecord>,
+      userRepo as Repository<User>,
+      activityRepo as Repository<Activity>
+    );
   });
 
   it("should be defined", () => {
@@ -37,98 +47,152 @@ describe("AttendanceService", () => {
   });
 
   it("findAll should return records", async () => {
-    const records = [
-      createMockAttendance({ id: "1" }),
-      createMockAttendance({ id: "2" }),
+    const records: AttendanceRecord[] = [
+      {
+        id: "r1",
+        userId: "u1",
+        activityId: "a1",
+        status: "present" as any,
+        remarks: "OK",
+        checkedInAt: undefined,
+        user: undefined as any,
+        activity: undefined as any,
+        createdAt: undefined as any,
+        updatedAt: undefined as any,
+      },
     ];
 
-    repo.find.mockResolvedValue(records);
+    attendanceRepo.find.mockResolvedValue(records);
 
     const result = await service.findAll();
 
-    expect(repo.find).toHaveBeenCalledTimes(1);
-    expect(result).toEqual(records);
+    expect(attendanceRepo.find).toHaveBeenCalledTimes(1);
+    expect(result).toBe(records);
   });
 
   it("findOne should return a record when found", async () => {
-    const record = createMockAttendance({ id: "abc" });
-    repo.findOne.mockResolvedValue(record);
+    const record: AttendanceRecord = {
+      id: "abc",
+      userId: "u1",
+      activityId: "a1",
+      status: "present" as any,
+      remarks: "Seeded",
+      checkedInAt: undefined,
+      user: undefined as any,
+      activity: undefined as any,
+      createdAt: undefined as any,
+      updatedAt: undefined as any,
+    };
+
+    attendanceRepo.findOne.mockResolvedValue(record);
 
     const result = await service.findOne("abc");
 
-    expect(repo.findOne).toHaveBeenCalledWith({
+    expect(attendanceRepo.findOne).toHaveBeenCalledWith({
       where: { id: "abc" },
+      // Match actual implementation ordering: ["activity", "user"]
       relations: ["activity", "user"],
     });
-    expect(result).toEqual(record);
+    expect(result).toBe(record);
   });
 
   it("findOne should throw when not found", async () => {
-    repo.findOne.mockResolvedValue(null);
+    attendanceRepo.findOne.mockResolvedValue(null);
 
-    await expect(service.findOne("missing")).rejects.toThrow(
-      "Attendance record with id missing not found"
+    await expect(service.findOne("missing-id")).rejects.toBeInstanceOf(
+      NotFoundException
     );
   });
 
-  it("create should persist a record", async () => {
+  it("create should persist a record (happy path)", async () => {
     const dto = {
-      activityId: "activity-1",
-      userId: "user-1",
-      status: "present" as const,
-      remarks: "on time",
-    };
+      userId: "u1",
+      activityId: "a1",
+      status: "present",
+      remarks: "Hello",
+    } as any;
 
-    const mock = createMockAttendance({
-      activityId: dto.activityId,
+    userRepo.findOne.mockResolvedValue({ id: "u1" } as User);
+    activityRepo.findOne.mockResolvedValue({ id: "a1" } as Activity);
+
+    const created: AttendanceRecord = {
+      id: "new-id",
       userId: dto.userId,
+      activityId: dto.activityId,
       status: dto.status,
       remarks: dto.remarks,
-    });
+      checkedInAt: undefined,
+      user: undefined as any,
+      activity: undefined as any,
+      createdAt: undefined as any,
+      updatedAt: undefined as any,
+    };
 
-    repo.create.mockReturnValue(mock);
-    repo.save.mockResolvedValue(mock);
+    attendanceRepo.create.mockReturnValue(created);
+    attendanceRepo.save.mockResolvedValue(created);
 
-    const result = await service.create(dto as any);
+    const result = await service.create(dto);
 
-    expect(repo.create).toHaveBeenCalledWith({
-      ...dto,
-      status: "present",
-    });
-    expect(repo.save).toHaveBeenCalledWith(mock);
-    expect(result).toMatchObject({
-      activityId: "activity-1",
-      userId: "user-1",
-      status: "present",
-    });
+    expect(attendanceRepo.create).toHaveBeenCalledWith(dto);
+    expect(attendanceRepo.save).toHaveBeenCalledWith(created);
+    expect(result).toBe(created);
   });
 
   it("update should merge & save a record", async () => {
-    const existing = createMockAttendance({ id: "abc", status: "present" });
-    const updated = createMockAttendance({ id: "abc", status: "late" });
+    const existing: AttendanceRecord = {
+      id: "abc",
+      userId: "u1",
+      activityId: "a1",
+      status: "present" as any,
+      remarks: "Old",
+      checkedInAt: undefined,
+      user: undefined as any,
+      activity: undefined as any,
+      createdAt: undefined as any,
+      updatedAt: undefined as any,
+    };
 
-    repo.findOne.mockResolvedValue(existing);
-    repo.save.mockResolvedValue(updated);
+    const dto = {
+      status: "late",
+      remarks: "Arrived late",
+    } as any;
 
-    const result = await service.update("abc", { status: "late" } as any);
+    const updated: AttendanceRecord = {
+      ...existing,
+      ...dto,
+    };
 
-    expect(repo.findOne).toHaveBeenCalled();
-    expect(repo.save).toHaveBeenCalled();
+    attendanceRepo.findOne.mockResolvedValue(existing);
+    attendanceRepo.save.mockResolvedValue(updated);
+
+    const result = await service.update("abc", dto);
+
+    expect(attendanceRepo.findOne).toHaveBeenCalled();
+    expect(attendanceRepo.save).toHaveBeenCalledWith(updated);
     expect(result.status).toBe("late");
+    expect(result.remarks).toBe("Arrived late");
+  });
+
+  it("update should throw NotFoundException when record missing", async () => {
+    attendanceRepo.findOne.mockResolvedValue(null);
+
+    await expect(
+      service.update("missing-id", { status: "late" } as any)
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it("remove should delete a record", async () => {
-    repo.delete.mockResolvedValue({ affected: 1 } as any);
+    attendanceRepo.delete.mockResolvedValue({ affected: 1 } as any);
 
     await expect(service.remove("abc")).resolves.not.toThrow();
-    expect(repo.delete).toHaveBeenCalledWith("abc");
+    expect(attendanceRepo.delete).toHaveBeenCalledWith("abc");
   });
 
-  it("remove should throw if not found", async () => {
-    repo.delete.mockResolvedValue({ affected: 0 } as any);
+  it("remove should throw NotFoundException if nothing deleted", async () => {
+    attendanceRepo.delete.mockResolvedValue({ affected: 0 } as any);
 
-    await expect(service.remove("missing")).rejects.toThrow(
-      "Attendance record with id missing not found"
+    await expect(service.remove("missing-id")).rejects.toBeInstanceOf(
+      NotFoundException
     );
   });
 });
