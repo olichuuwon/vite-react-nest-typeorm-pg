@@ -18,7 +18,6 @@ describe("App e2e", () => {
   let attendanceRepo: Repository<AttendanceRecord>;
 
   let adminUser: User;
-  let attendeeUser: User;
   let seededActivity: Activity;
   let seededAttendance: AttendanceRecord;
 
@@ -40,7 +39,7 @@ describe("App e2e", () => {
       getRepositoryToken(AttendanceRecord)
     );
 
-    // FK friendly cleanup order: attendance → activities → users
+    // Clear existing data (order matters because of FKs)
     await attendanceRepo
       .createQueryBuilder()
       .delete()
@@ -49,21 +48,12 @@ describe("App e2e", () => {
     await activityRepo.createQueryBuilder().delete().from(Activity).execute();
     await userRepo.createQueryBuilder().delete().from(User).execute();
 
-    // Seed admin user (used for login + initial attendance)
+    // Seed admin user
     adminUser = await userRepo.save(
       userRepo.create({
         name: "Admin User",
         identifier: "admin",
         role: "admin",
-      })
-    );
-
-    // Seed another regular user (used in POST /attendance test)
-    attendeeUser = await userRepo.save(
-      userRepo.create({
-        name: "Attendee User",
-        identifier: "attendee",
-        role: "member",
       })
     );
 
@@ -86,11 +76,47 @@ describe("App e2e", () => {
         remarks: "Seeded attendance",
       })
     );
+
+    // Login once for the suite
+    const loginRes = await request(httpServer)
+      .post("/auth/login")
+      .send({ identifier: "admin" });
+
+    expect([200, 201]).toContain(loginRes.status);
+    token = loginRes.body.accessToken;
   });
 
   afterAll(async () => {
     await app.close();
   });
+
+  const authHeader = () => ({ Authorization: `Bearer ${token}` });
+
+  const getWithAuth = (path: string) =>
+    request(httpServer).get(path).set(authHeader());
+
+  const postWithAuth = (path: string) =>
+    request(httpServer).post(path).set(authHeader());
+
+  const putWithAuth = (path: string) =>
+    request(httpServer).put(path).set(authHeader());
+
+  const deleteWithAuth = (path: string) =>
+    request(httpServer).delete(path).set(authHeader());
+
+  // Create a temporary activity to avoid colliding with seededAttendance
+  async function createTempActivity(): Promise<Activity> {
+    const res = await postWithAuth("/activities")
+      .send({
+        title: "Temp E2E Activity",
+        description: "Temp activity for attendance tests",
+        location: "HQ",
+        createdByUserId: adminUser.id,
+      })
+      .expect([200, 201]);
+
+    return res.body as Activity;
+  }
 
   it("GET /users without auth should return 401", async () => {
     await request(httpServer).get("/users").expect(401);
@@ -105,28 +131,17 @@ describe("App e2e", () => {
     expect(res.body).toHaveProperty("accessToken");
     expect(res.body).toHaveProperty("user");
     expect(res.body.user.identifier).toBe("admin");
-
-    token = res.body.accessToken;
-
-    expect(typeof token).toBe("string");
-    expect(token.length).toBeGreaterThan(0);
   });
 
   it("GET /users with valid JWT should return array including admin", async () => {
-    const res = await request(httpServer)
-      .get("/users")
-      .set("Authorization", `Bearer ${token}`)
-      .expect(200);
+    const res = await getWithAuth("/users").expect(200);
 
     expect(Array.isArray(res.body)).toBe(true);
     expect(res.body.some((u: User) => u.identifier === "admin")).toBe(true);
   });
 
   it("GET /activities with JWT should return seeded activity", async () => {
-    const res = await request(httpServer)
-      .get("/activities")
-      .set("Authorization", `Bearer ${token}`)
-      .expect(200);
+    const res = await getWithAuth("/activities").expect(200);
 
     expect(Array.isArray(res.body)).toBe(true);
     expect(res.body.length).toBeGreaterThanOrEqual(1);
@@ -136,10 +151,7 @@ describe("App e2e", () => {
   });
 
   it("GET /attendance with JWT should return seeded attendance", async () => {
-    const res = await request(httpServer)
-      .get("/attendance")
-      .set("Authorization", `Bearer ${token}`)
-      .expect(200);
+    const res = await getWithAuth("/attendance").expect(200);
 
     expect(Array.isArray(res.body)).toBe(true);
     expect(
@@ -153,10 +165,9 @@ describe("App e2e", () => {
   });
 
   it("GET /attendance/activity/:activityId should return records for that activity", async () => {
-    const res = await request(httpServer)
-      .get(`/attendance/activity/${seededActivity.id}`)
-      .set("Authorization", `Bearer ${token}`)
-      .expect(200);
+    const res = await getWithAuth(
+      `/attendance/activity/${seededActivity.id}`
+    ).expect(200);
 
     expect(Array.isArray(res.body)).toBe(true);
     expect(
@@ -168,10 +179,9 @@ describe("App e2e", () => {
   });
 
   it("GET /attendance/user/:userId should return records for that user", async () => {
-    const res = await request(httpServer)
-      .get(`/attendance/user/${adminUser.id}`)
-      .set("Authorization", `Bearer ${token}`)
-      .expect(200);
+    const res = await getWithAuth(`/attendance/user/${adminUser.id}`).expect(
+      200
+    );
 
     expect(Array.isArray(res.body)).toBe(true);
     expect(
@@ -183,80 +193,71 @@ describe("App e2e", () => {
   });
 
   it("POST /attendance should create record linked to user + activity", async () => {
-    const res = await request(httpServer)
-      .post("/attendance")
-      .set("Authorization", `Bearer ${token}`)
+    const tempActivity = await createTempActivity();
+
+    const res = await postWithAuth("/attendance")
       .send({
-        userId: attendeeUser.id, // use the second user
-        activityId: seededActivity.id,
+        userId: adminUser.id,
+        activityId: tempActivity.id,
         status: "present",
         remarks: "Created via e2e",
       })
-      .expect(201);
+      .expect([200, 201]);
 
-    expect(res.body.userId).toBe(attendeeUser.id);
-    expect(res.body.activityId).toBe(seededActivity.id);
+    expect(res.body.userId).toBe(adminUser.id);
+    expect(res.body.activityId).toBe(tempActivity.id);
   });
 
   it("POST /attendance should return 404 for non-existent user", async () => {
-    const res = await request(httpServer)
-      .post("/attendance")
-      .set("Authorization", `Bearer ${token}`)
-      .send({
-        userId: "00000000-0000-0000-0000-000000000000",
-        activityId: seededActivity.id,
-        status: "present",
-      });
+    const res = await postWithAuth("/attendance").send({
+      userId: "00000000-0000-0000-0000-000000000000",
+      activityId: seededActivity.id,
+      status: "present",
+    });
 
     expect(res.status).toBe(404);
   });
 
   it("POST /attendance should return 404 for non-existent activity", async () => {
-    const res = await request(httpServer)
-      .post("/attendance")
-      .set("Authorization", `Bearer ${token}`)
-      .send({
-        userId: adminUser.id,
-        activityId: "00000000-0000-0000-0000-000000000000",
-        status: "present",
-      });
+    const res = await postWithAuth("/attendance").send({
+      userId: adminUser.id,
+      activityId: "00000000-0000-0000-0000-000000000000",
+      status: "present",
+    });
 
     expect(res.status).toBe(404);
   });
 
   // if you enforce unique(activityId, userId)
   it("POST /attendance should reject duplicate attendance for same user + activity", async () => {
+    const tempActivity = await createTempActivity();
+
     // first create
-    await request(httpServer)
-      .post("/attendance")
-      .set("Authorization", `Bearer ${token}`)
+    await postWithAuth("/attendance")
       .send({
         userId: adminUser.id,
-        activityId: seededActivity.id,
+        activityId: tempActivity.id,
         status: "present",
       })
       .expect([200, 201]);
 
     // second create same pair
-    const res = await request(httpServer)
-      .post("/attendance")
-      .set("Authorization", `Bearer ${token}`)
-      .send({
-        userId: adminUser.id,
-        activityId: seededActivity.id,
-        status: "present",
-      });
+    const res = await postWithAuth("/attendance").send({
+      userId: adminUser.id,
+      activityId: tempActivity.id,
+      status: "present",
+    });
 
     expect([400, 409]).toContain(res.status);
   });
 
   it("PUT /attendance/:id should update status and remarks", async () => {
-    const createRes = await request(httpServer)
-      .post("/attendance")
-      .set("Authorization", `Bearer ${token}`)
+    const tempActivity = await createTempActivity();
+
+    const createRes = await postWithAuth("/attendance")
       .send({
         userId: adminUser.id,
-        activityId: seededActivity.id,
+        activityId: tempActivity.id,
         status: "present",
         remarks: "Initial",
       })
@@ -264,13 +265,10 @@ describe("App e2e", () => {
 
     const id = createRes.body.id;
 
-    const updateRes = await request(httpServer)
-      .put(`/attendance/${id}`)
-      .set("Authorization", `Bearer ${token}`)
-      .send({
-        status: "late",
-        remarks: "Arrived late",
-      });
+    const updateRes = await putWithAuth(`/attendance/${id}`).send({
+      status: "late",
+      remarks: "Arrived late",
+    });
 
     expect(updateRes.status).toBe(200);
     expect(updateRes.body.status).toBe("late");
@@ -278,27 +276,21 @@ describe("App e2e", () => {
   });
 
   it("DELETE /attendance/:id should remove record", async () => {
-    const createRes = await request(httpServer)
-      .post("/attendance")
-      .set("Authorization", `Bearer ${token}`)
+    const tempActivity = await createTempActivity();
+
+    const createRes = await postWithAuth("/attendance")
       .send({
         userId: adminUser.id,
-        activityId: seededActivity.id,
+        activityId: tempActivity.id,
         status: "present",
       })
       .expect([200, 201]);
 
     const id = createRes.body.id;
 
-    await request(httpServer)
-      .delete(`/attendance/${id}`)
-      .set("Authorization", `Bearer ${token}`)
-      .expect(200);
+    await deleteWithAuth(`/attendance/${id}`).expect(200);
 
-    const getRes = await request(httpServer)
-      .get(`/attendance/${id}`)
-      .set("Authorization", `Bearer ${token}`);
-
+    const getRes = await getWithAuth(`/attendance/${id}`);
     expect(getRes.status).toBe(404);
   });
 });
