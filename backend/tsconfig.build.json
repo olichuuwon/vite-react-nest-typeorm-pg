@@ -1,4 +1,18 @@
 {
   "extends": "./tsconfig.json",
-  "exclude": ["node_modules", "test", "dist", "**/*spec.ts"]
+  "compilerOptions": {
+    // All compiled files go under backend/dist
+    "outDir": "./dist",
+    // Logical root of the source tree (backend + shared)
+    "rootDir": "../"
+  },
+  "include": ["../backend/src/**/*.ts", "../shared/**/*.ts"],
+  "exclude": [
+    "node_modules",
+    "../node_modules",
+    "dist",
+    "../dist",
+    "test",
+    "**/*.spec.ts"
+  ]
 }
