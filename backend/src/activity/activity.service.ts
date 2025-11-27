@@ -1,19 +1,72 @@
-// server/src/activity/activity.service.ts
-import { Injectable } from "@nestjs/common";
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { Activity } from "./activity.entity";
+import { CreateActivityDto } from "./dto/create-activity.dto";
+import { UpdateActivityDto } from "./dto/update-activity.dto";
 
 @Injectable()
 export class ActivityService {
   constructor(
     @InjectRepository(Activity)
-    private readonly activityRepo: Repository<Activity>,
+    private readonly activityRepo: Repository<Activity>
   ) {}
 
   findAll(): Promise<Activity[]> {
     return this.activityRepo.find({
-      order: { startAt: "ASC" },
+      relations: ["createdBy", "attendanceRecords"],
     });
+  }
+
+  async findOne(id: string): Promise<Activity> {
+    const activity = await this.activityRepo.findOne({
+      where: { id },
+      relations: ["createdBy", "attendanceRecords"],
+    });
+
+    if (!activity) {
+      throw new NotFoundException(`Activity with id ${id} not found`);
+    }
+
+    return activity;
+  }
+
+  async create(dto: CreateActivityDto): Promise<Activity> {
+    const activity = this.activityRepo.create({
+      ...dto,
+    });
+
+    return this.activityRepo.save(activity);
+  }
+
+  async update(id: string, dto: UpdateActivityDto): Promise<Activity> {
+    const activity = await this.findOne(id);
+    Object.assign(activity, dto);
+    return this.activityRepo.save(activity);
+  }
+
+  async remove(id: string): Promise<void> {
+    // Load activity + attendance records
+    const activity = await this.activityRepo.findOne({
+      where: { id },
+      relations: ["attendanceRecords"],
+    });
+
+    if (!activity) {
+      throw new NotFoundException(`Activity with id ${id} not found`);
+    }
+
+    // If there are attendance records, block deletion
+    if (activity.attendanceRecords && activity.attendanceRecords.length > 0) {
+      throw new ConflictException(
+        "Cannot delete activity with existing attendance records"
+      );
+    }
+
+    await this.activityRepo.remove(activity);
   }
 }
