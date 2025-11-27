@@ -6,11 +6,13 @@ import type {
   LoginResponseDto,
   UserDto,
 } from "./../../../shared/dto/auth.dto";
+import { Public } from "./public.decorator";
 
 @Controller("auth")
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Public()
   @Post("login")
   login(@Body() dto: LoginRequestDto): Promise<LoginResponseDto> {
     return this.authService.login(dto.identifier);
