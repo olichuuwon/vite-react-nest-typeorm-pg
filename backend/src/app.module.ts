@@ -28,7 +28,12 @@ import { JwtAuthGuard } from "./auth/jwt-auth.guard";
     UserModule,
     ActivityModule,
     AttendanceModule,
-    AuthModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
   ],
   providers: [
     {
