@@ -29,7 +29,12 @@ import { RolesGuard } from "./auth/roles.guard";
     UserModule,
     ActivityModule,
     AttendanceModule,
-    AuthModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
   ],
   providers: [
     {
