@@ -1,5 +1,16 @@
 import { Outlet, NavLink } from 'react-router-dom'
-import { Box, Flex, Heading, Link, VStack, HStack, Spacer, Text, Button } from '@chakra-ui/react'
+import {
+  Box,
+  Flex,
+  Heading,
+  Image,
+  Link,
+  VStack,
+  HStack,
+  Spacer,
+  Text,
+  Button,
+} from '@chakra-ui/react'
 import { useAuth } from '../../context/AuthContext'
 
 export const AppLayout = () => {
@@ -9,10 +20,10 @@ export const AppLayout = () => {
     <Flex minH="100vh" bg="gray.50">
       {/* Sidebar */}
       <Box w="240px" bg="white" borderRight="1px solid" borderColor="gray.200" p={4}>
-        <Heading size="md" mb={6}>
-          Stalkr
-        </Heading>
-
+        <HStack spacing={3} mb={6} align="center">
+          <Image src="/cat.svg" boxSize="px" alt="cat logo" />
+          <Heading size="md">Stalkr</Heading>
+        </HStack>
         <VStack align="stretch" spacing={2}>
           <NavItem to="/activities" label="Activities" />
           <NavItem to="/users" label="Users" />
