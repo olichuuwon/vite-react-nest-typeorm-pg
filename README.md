@@ -14,37 +14,37 @@ _A lightweight activity & attendance tracking system for training, units, and ad
 ## 📁 Project Structure
 
 ```
-my-app/
-├── .husky/                 # Pre-commit hooks (lint/format checks)
-├── public/                 # Static assets (SVG/icons)
-├── server/                 # Backend (NestJS)
-│   ├── src/
-│   │   ├── activity/       # Activity module, controller, service, entity
-│   │   ├── attendance/     # Attendance module
-│   │   ├── user/           # User module
-│   │   ├── auth/           # (Later) Auth module with JWT
-│   │   ├── seed.ts         # Database seed script
-│   │   ├── app.module.ts
-│   │   └── main.ts
-├── src/                    # Frontend (React)
-│   ├── api/
-│   │   ├── client.ts       # Axios instance (baseURL /api)
-│   │   ├── activities.ts   # Activity API functions
-│   │   ├── users.ts        # User API functions (later)
-│   │   └── attendance.ts   # Attendance API (later)
-│   ├── assets/             # Images/icons
-│   ├── components/         # Reusable UI components
-│   ├── context/            # React contexts (AuthContext)
-│   ├── hooks/              # Custom hooks (useActivities, etc.)
-│   ├── pages/              # Route pages (similar to Next.js folder structure)
-│   │   ├── login/
-│   │   ├── activities/
-│   │   ├── users/
-│   │   └── calendar/
-│   ├── App.tsx
-│   └── main.tsx
-├── vite.config.ts          # Vite dev server + proxy for Nest
-└── README.md
+.
+└── vite-react-nest-typeorm-pg
+    ├── backend/                 # NestJS backend (TypeORM, PostgreSQL)
+    │   ├── dist/                # Compiled output
+    │   ├── src/                 # Application source code
+    │   ├── test/                # Backend tests
+    │   ├── nest-cli.json        # Nest CLI config
+    │   ├── package.json         # Backend dependencies
+    │   ├── package-lock.json
+    │   ├── tsconfig.json        # TypeScript config
+    │   ├── tsconfig.build.json  # TS build config
+    │   └── README.md
+
+    ├── frontend/                # Vite + React frontend
+    │   ├── src/                 # Application source code
+    │   ├── public/              # Static assets
+    │   ├── index.html           # Entry HTML
+    │   ├── package.json         # Frontend dependencies
+    │   ├── package-lock.json
+    │   ├── tsconfig.json        # TypeScript config
+    │   ├── tsconfig.app.json
+    │   ├── tsconfig.node.json
+    │   ├── vite.config.ts       # Vite config
+    │   └── README.md
+
+    ├── shared/                  # Shared code across FE/BE
+    │   └── dto/                 # Shared DTOs for type-safe API
+
+    ├── docker-compose.yaml      # Postgres service
+    └── README.md                # Project overview
+
 ```
 
 ---

@@ -1,8 +1,8 @@
 // server/src/activity/activity.service.ts
-import { Injectable } from '@nestjs/common'
-import { InjectRepository } from '@nestjs/typeorm'
-import { Repository } from 'typeorm'
-import { Activity } from './activity.entity'
+import { Injectable } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { Activity } from "./activity.entity";
 
 @Injectable()
 export class ActivityService {
@@ -13,7 +13,7 @@ export class ActivityService {
 
   findAll(): Promise<Activity[]> {
     return this.activityRepo.find({
-      order: { startAt: 'ASC' },
-    })
+      order: { startAt: "ASC" },
+    });
   }
 }
