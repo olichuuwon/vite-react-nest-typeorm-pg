@@ -22,10 +22,9 @@ export const AppLayout = () => {
       {/* Sidebar */}
       <Box w="240px" bg="white" borderRight="1px solid" borderColor="gray.200" p={4}>
         <HStack spacing={3} mb={6} align="center">
-          <Image src="/cat.svg" boxSize="36px" alt="cat logo" />
+          <Image src="/cat.svg" boxSize="px" alt="cat logo" />
           <Heading size="md">Stalkr</Heading>
         </HStack>
-
         <VStack align="stretch" spacing={2}>
           <NavItem to="/activities" label="Activities" />
           {isAdmin && <NavItem to="/users" label="Users" />}
