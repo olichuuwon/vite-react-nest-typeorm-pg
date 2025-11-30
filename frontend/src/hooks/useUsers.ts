@@ -1,19 +1,28 @@
-import { useQuery } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
 import { getUsers, type UserDto } from '../api/users'
-import { useAuth } from '../context/AuthContext'
 
 export const useUsers = () => {
-  const { isAuthenticated } = useAuth()
+  const [users, setUsers] = useState<UserDto[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const { data, isLoading, error } = useQuery<UserDto[]>({
-    queryKey: ['users'],
-    queryFn: getUsers,
-    enabled: isAuthenticated,
-  })
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+        const data = await getUsers()
+        setUsers(data)
+      } catch (err) {
+        console.error(err)
+        setError('Failed to load users')
+      } finally {
+        setIsLoading(false)
+      }
+    }
 
-  return {
-    users: data ?? [],
-    isLoading,
-    error,
-  }
+    load()
+  }, [])
+
+  return { users, isLoading, error }
 }
