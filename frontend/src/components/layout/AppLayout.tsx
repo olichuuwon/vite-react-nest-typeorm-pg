@@ -21,7 +21,7 @@ export const AppLayout = () => {
       {/* Sidebar */}
       <Box w="240px" bg="white" borderRight="1px solid" borderColor="gray.200" p={4}>
         <HStack spacing={3} mb={6} align="center">
-          <Image src="/cat.svg" boxSize="px" alt="cat logo" />
+          <Image src="/cat.svg" boxSize="36px" alt="cat logo" />
           <Heading size="md">Stalkr</Heading>
         </HStack>
         <VStack align="stretch" spacing={2}>
@@ -42,14 +42,32 @@ export const AppLayout = () => {
           borderColor="gray.200"
           bg="white"
         >
-          <Heading size="md">Stalkr</Heading>
+          {user && (
+            <HStack spacing={2}>
+              <Text fontSize="sm" color="gray.600">
+                Logged in as
+              </Text>
+
+              <HStack
+                spacing={1.5}
+                px={3}
+                py={1}
+                bg="gray.100"
+                borderRadius="full"
+                color="gray.800"
+                fontSize="sm"
+                fontWeight="medium"
+              >
+                <Text>{user.name}</Text>
+                <Text fontSize="sm"> 🐾</Text>
+              </HStack>
+            </HStack>
+          )}
+
           <Spacer />
-          <HStack spacing={3}>
-            {user && <Text fontSize="sm">Logged in as {user.name}</Text>}
-            <Button size="sm" variant="outline" onClick={logout}>
-              Logout
-            </Button>
-          </HStack>
+          <Button size="sm" variant="outline" onClick={logout}>
+            Logout
+          </Button>
         </Flex>
 
         <Box flex="1" p={6}>
