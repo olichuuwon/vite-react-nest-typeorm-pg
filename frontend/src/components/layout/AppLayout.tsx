@@ -15,6 +15,7 @@ import { useAuth } from '../../context/AuthContext'
 
 export const AppLayout = () => {
   const { user, logout } = useAuth()
+  const isAdmin = user?.role === 'admin'
 
   return (
     <Flex minH="100vh" bg="gray.50">
@@ -24,9 +25,12 @@ export const AppLayout = () => {
           <Image src="/cat.svg" boxSize="36px" alt="cat logo" />
           <Heading size="md">Stalkr</Heading>
         </HStack>
+
         <VStack align="stretch" spacing={2}>
           <NavItem to="/activities" label="Activities" />
-          <NavItem to="/users" label="Users" />
+
+          {isAdmin && <NavItem to="/users" label="Users" />}
+
           <NavItem to="/calendar" label="Calendar" />
         </VStack>
       </Box>
