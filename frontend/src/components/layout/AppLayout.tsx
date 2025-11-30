@@ -25,9 +25,12 @@ export const AppLayout = () => {
           <Image src="/cat.svg" boxSize="36px" alt="cat logo" />
           <Heading size="md">Stalkr</Heading>
         </HStack>
+
         <VStack align="stretch" spacing={2}>
           <NavItem to="/activities" label="Activities" />
+
           {isAdmin && <NavItem to="/users" label="Users" />}
+
           <NavItem to="/calendar" label="Calendar" />
         </VStack>
       </Box>
