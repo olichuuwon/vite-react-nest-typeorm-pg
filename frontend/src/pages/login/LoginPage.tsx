@@ -8,18 +8,14 @@ export const LoginPage = () => {
   const navigate = useNavigate()
   const [identifier, setIdentifier] = useState('')
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
     await login(identifier)
     navigate('/activities')
   }
 
   return (
-    <Box minH="100vh" display="flex" alignItems="center" justifyContent="center">
-      <Box bg="white" p={8} rounded="lg" shadow="md" w="sm">
-        <Heading size="md" mb={4}>
-          Login
-        </Heading>
-
+        <Box as="form" onSubmit={handleSubmit}>
         <Stack spacing={4}>
           <Input
             placeholder="Identifier"
@@ -27,7 +23,7 @@ export const LoginPage = () => {
             onChange={(e) => setIdentifier(e.target.value)}
           />
 
-          <Button colorScheme="blue" onClick={handleSubmit}>
+            <Button colorScheme="blue" type="submit">
             Login
           </Button>
         </Stack>
