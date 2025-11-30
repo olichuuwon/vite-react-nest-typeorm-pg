@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { RequireAuth } from './components/auth/RequireAuth'
+import { RequireAdmin } from './components/auth/RequireAdmin'
 
 import { LoginPage } from './pages/login/LoginPage'
 import { AppLayout } from './components/layout/AppLayout'
@@ -27,14 +28,32 @@ export const Router = () => {
           </RequireAuth>
         }
       >
+        {/* Default redirect */}
         <Route index element={<Navigate to="/activities" replace />} />
 
+        {/* Activities */}
         <Route path="activities" element={<ActivitiesListPage />} />
         <Route path="activities/:activityId" element={<ActivityDetailPage />} />
 
-        <Route path="users" element={<UsersListPage />} />
-        <Route path="users/:userId" element={<UserDetailPage />} />
+        {/* Users – ADMIN ONLY */}
+        <Route
+          path="users"
+          element={
+            <RequireAdmin>
+              <UsersListPage />
+            </RequireAdmin>
+          }
+        />
+        <Route
+          path="users/:userId"
+          element={
+            <RequireAdmin>
+              <UserDetailPage />
+            </RequireAdmin>
+          }
+        />
 
+        {/* Calendar */}
         <Route path="calendar" element={<ActivitiesCalendarPage />} />
       </Route>
 
