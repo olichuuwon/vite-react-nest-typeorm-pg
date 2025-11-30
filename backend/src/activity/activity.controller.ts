@@ -13,6 +13,8 @@ import { CreateActivityDto } from "./dto/create-activity.dto";
 import { UpdateActivityDto } from "./dto/update-activity.dto";
 import { Activity } from "./activity.entity";
 import { Roles } from "../auth/roles.decorator";
+import { CurrentUser } from "../auth/current-user.decorator";
+import type { User } from "../user/user.entity";
 
 @Controller("activities")
 export class ActivityController {
@@ -21,6 +23,13 @@ export class ActivityController {
   @Get()
   findAll(): Promise<Activity[]> {
     return this.activityService.findAll();
+  }
+
+  @Get("created-by/:userId")
+  findCreatedByUser(
+    @Param("userId", new ParseUUIDPipe({ version: "4" })) userId: string
+  ): Promise<Activity[]> {
+    return this.activityService.findCreatedByUser(userId);
   }
 
   @Get(":id")
@@ -32,8 +41,11 @@ export class ActivityController {
 
   @Post()
   @Roles("admin")
-  create(@Body() dto: CreateActivityDto): Promise<Activity> {
-    return this.activityService.create(dto);
+  create(
+    @Body() dto: CreateActivityDto,
+    @CurrentUser() user: User
+  ): Promise<Activity> {
+    return this.activityService.create(dto, user);
   }
 
   @Put(":id")
