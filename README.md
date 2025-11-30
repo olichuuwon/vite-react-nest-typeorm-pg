@@ -11,102 +11,99 @@ _A lightweight activity & attendance tracking system for training, units, and ad
 
 ---
 
-## 📁 Project Structure
+## 🛠️ Backend Environment Variables
 
 ```
-.
-└── vite-react-nest-typeorm-pg
-    ├── backend/                 # NestJS backend (TypeORM, PostgreSQL)
-    │   ├── dist/                # Compiled output
-    │   ├── src/                 # Application source code
-    │   ├── test/                # Backend tests
-    │   ├── nest-cli.json        # Nest CLI config
-    │   ├── package.json         # Backend dependencies
-    │   ├── package-lock.json
-    │   ├── tsconfig.json        # TypeScript config
-    │   ├── tsconfig.build.json  # TS build config
-    │   └── README.md
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=myuser
+DB_PASS=mypassword
+DB_NAME=mydb
 
-    ├── frontend/                # Vite + React frontend
-    │   ├── src/                 # Application source code
-    │   ├── public/              # Static assets
-    │   ├── index.html           # Entry HTML
-    │   ├── package.json         # Frontend dependencies
-    │   ├── package-lock.json
-    │   ├── tsconfig.json        # TypeScript config
-    │   ├── tsconfig.app.json
-    │   ├── tsconfig.node.json
-    │   ├── vite.config.ts       # Vite config
-    │   └── README.md
+DB_SYNC=true
+DB_LOGGING=false
 
-    ├── shared/                  # Shared code across FE/BE
-    │   └── dto/                 # Shared DTOs for type-safe API
-
-    ├── docker-compose.yaml      # Postgres service
-    └── README.md                # Project overview
-
+JWT_SECRET=supersecret_dont_use_this_in_prod
+JWT_EXPIRES_IN=1d
 ```
 
 ---
 
-## 🎯 Project Goals
+# 📁 Project Structure
 
-Trackr Lite is a starter project to get familiar with:
-
-- Building full-stack features using **React + NestJS**
-- Designing clean **frontend architecture** (hooks, contexts, pages)
-- Building CRUD flows with **TypeORM + PostgreSQL**
-- Implementing **JWT auth** and route protection
-- Practising SWE best practices: modular code, clear API boundaries
-- Building Activity → Attendance → User relationships
-- Delivering a working, demo-ready MVP for onboarding
+```
+vite-react-nest-typeorm-pg
+├── backend/                 # NestJS backend
+│   ├── dist/
+│   ├── src/
+│   ├── test/
+│   ├── nest-cli.json
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── README.md
+│
+├── frontend/                # Vite + React + Chakra UI
+│   ├── src/
+│   ├── public/
+│   ├── index.html
+│   ├── package.json
+│   └── vite.config.ts
+│
+├── shared/                  # Shared DTOs/types
+│   └── dto/
+│
+├── docker-compose.yaml      # Local Postgres setup
+└── README.md                # Project overview (this file)
+```
 
 ---
 
 ## 🗄️ Data Model (TypeORM Entities)
 
-### **User**
+## 👤 **User**
 
-| Field             | Type      | Notes            |
-| ----------------- | --------- | ---------------- | ---- |
-| id                | uuid      | PK               |
-| name              | string    | Display name     |
-| email             | string    | Unique           |
-| identifier        | string    | Login identifier |
-| role              | 'admin'   | 'user'           | RBAC |
-| attendanceRecords | relation  | One-to-many      |
-| createdAt         | timestamp | Auto             |
-| updatedAt         | timestamp | Auto             |
-
----
-
-### **Activity**
-
-| Field             | Type      | Notes        |
-| ----------------- | --------- | ------------ |
-| id                | uuid      | PK           |
-| title             | string    | Required     |
-| description       | text      | Optional     |
-| date              | date      | Display date |
-| startAt           | timestamp | Start        |
-| endAt             | timestamp | End          |
-| location          | string    | Optional     |
-| createdByUserId   | uuid      | FK to User   |
-| attendanceRecords | relation  | One-to-many  |
-| createdAt         | timestamp | Auto         |
+| Field             | Type           | Notes                     |
+| ----------------- | -------------- | ------------------------- |
+| id                | uuid           | Primary key               |
+| name              | string         | Display name              |
+| email             | string         | Unique (optional)         |
+| identifier        | string         | Login identifier (unique) |
+| role              | admin / member | RBAC                      |
+| attendanceRecords | relation       | One-to-many Attendance    |
+| createdAt         | timestamp      | Auto-generated            |
+| updatedAt         | timestamp      | Auto-generated            |
 
 ---
 
-### **AttendanceRecord**
+## 📅 **Activity**
 
-| Field       | Type                 | Notes          |
-| ----------- | -------------------- | -------------- |
-| id          | uuid                 | PK             |
-| userId      | uuid                 | FK to User     |
-| activityId  | uuid                 | FK to Activity |
-| status      | present/late/absent  | Required       |
-| remarks     | string (optional)    | Optional       |
-| checkedInAt | timestamp (optional) | Optional       |
+| Field             | Type      | Notes                  |
+| ----------------- | --------- | ---------------------- |
+| id                | uuid      | Primary key            |
+| title             | string    | Required               |
+| description       | text      | Optional               |
+| date              | date      | Activity date          |
+| startAt           | timestamp | Start time             |
+| endAt             | timestamp | End time               |
+| location          | string    | Optional               |
+| createdByUserId   | uuid      | FK → User              |
+| attendanceRecords | relation  | One-to-many Attendance |
+| createdAt         | timestamp | Auto-generated         |
+
+---
+
+## 📝 **AttendanceRecord**
+
+| Field       | Type                | Notes         |
+| ----------- | ------------------- | ------------- |
+| id          | uuid                | Primary key   |
+| userId      | uuid                | FK → User     |
+| activityId  | uuid                | FK → Activity |
+| status      | present/late/absent | Required      |
+| remarks     | string              | Optional      |
+| checkedInAt | timestamp           | Optional      |
+
+**Planned:** Add DB-level unique constraint on `(userId, activityId)`.
 
 ---
 
@@ -115,55 +112,53 @@ Trackr Lite is a starter project to get familiar with:
 The `seed.ts` script populates demo data:
 
 - 1 admin user
-- 2 regular users
+- 2 members
 - 2 activities
 - Attendance records
 
 Run:
 
 ```bash
-cd server
+cd backend
 npm run seed
 ```
 
 ---
 
-## ▶️ Running the App
+# ▶️ Running the App
 
 ### **Backend**
 
 ```bash
-cd server
+cd backend
 npm run start:dev
 ```
 
 ### **Frontend**
 
 ```bash
-cd my-app
-npm run dev
+cd frontend
+npm run start:dev
 ```
 
-**Vite proxy** forwards:
-`http://localhost:5173/api/...` → `http://localhost:3000/...`
+The Vite proxy maps:
+
+```
+/api/*  →  http://localhost:3000/*
+```
+
+---
+
+# 🚦 Development Progress
 
 ---
 
 ## **Phase 1 — App Shell & Routing**
 
+**Status:** 🟢 Completed
 **Branch:** `feat/app-shell-and-routing`
 
-**Status:** 🟢 _Completed_
-
-- [x] Set up React Router
-
-  - `/login`
-  - `/activities`
-  - `/activities/:activityId`
-  - `/users`
-  - `/users/:userId`
-  - `/calendar`
-
+- [x] React Router setup (`/login`, `/activities`, `/users`, `/calendar`)
 - [x] Implement AppLayout (sidebar + top bar)
 - [x] Placeholder pages
 - [x] Navigation working
@@ -172,6 +167,7 @@ npm run dev
 
 ## **Phase 2 — Frontend Auth (Context Only)**
 
+**Status:** 🟢 Completed
 **Branch:** `feat/auth-frontend-context`
 
 **Status:** 🟢 _Completed_
@@ -192,113 +188,125 @@ npm run dev
 
 ## **Phase 3 — Backend Auth (JWT)**
 
+**Status:** 🟢 Completed
 **Branch:** `feat/auth-backend-jwt`
 
-**Status:** ⏳ _Pending_
+Backend:
 
-- [ ] Add AuthModule in Nest
-- [ ] `POST /auth/login` (identifier-based)
-- [ ] Generate JWT token
-- [ ] Implement `JwtStrategy`, `JwtAuthGuard`
-- [ ] Protect `/users`, `/activities`, `/attendance`
-- [ ] Frontend AuthContext: call real login endpoint
-- [ ] Store token in localStorage + attach in axios
+- [x] Identifier login
+- [x] JWT issuing
+- [x] JwtStrategy + AuthGuard
+- [x] Protect `/users`, `/activities`, `/attendance`
+
+Frontend:
+
+- [x] Login calls real backend
+- [x] Token stored in localStorage
+- [x] Token auto-attached to API client
 
 ---
 
 ## **Phase 4 — Users CRUD**
 
-**Branch:** `feat/users-crud`
+**Status:**
 
-### Backend
+- **Backend:** 🟢 Completed
+- **Frontend:** ⏳ Pending
+  **Branch:** `feat/users-crud`
 
-**Status:** ⏳ Pending
+Backend features:
 
-- [ ] `GET /users`
-- [ ] `GET /users/:id`
-- [ ] `POST /users`
-- [ ] `PUT /users/:id`
-- [ ] `DELETE /users/:id`
+- [x] GET /users
+- [x] GET /users/:id
+- [x] POST /users (admin only)
+- [x] PUT /users/:id (admin only)
+- [x] DELETE /users/:id (admin only)
+- [x] Unique identifier enforcement
+- [x] Full e2e test coverage
 
-### Frontend
+Pending (FE):
 
-**Status:** ⏳ Pending
-
-- [ ] UsersListPage (table)
-- [ ] UserDetailPage
-- [ ] “Create User” modal/form
+- [ ] Users table page
+- [ ] User detail page
+- [ ] Create user modal/form for admin
 
 ---
 
 ## **Phase 5 — Activities CRUD**
 
-**Branch:** `feat/activities-crud`
+**Status:**
 
-### Backend
+- **Backend:** 🟢 Completed
+- **Frontend:** 🟡 Partial (list only)
+  **Branch:** `feat/activities-crud`
 
-**Status:** 🟢 _Partially Completed (findAll done)_
+Backend features:
 
-- [x] `GET /activities` (list)
-- [ ] `GET /activities/:id`
-- [ ] `POST /activities`
-- [ ] `PUT /activities/:id`
-- [ ] `DELETE /activities/:id`
+- [x] GET /activities
+- [x] GET /activities/:id
+- [x] POST /activities (admin only)
+- [x] PUT /activities/:id (admin only)
+- [x] DELETE /activities/:id (blocked if attendance exists → 409)
+- [x] e2e tested
 
-### Frontend
+Pending (FE):
 
-**Status:** 🟢 _Fetching list done_
-
-- [x] ActivitiesListPage loads real data
 - [ ] Activity detail page
-- [ ] Create/edit activity form
+- [ ] Create/edit activity UI
 
 ---
 
 ## **Phase 6 — Attendance Management**
 
-**Branch:** `feat/attendance-management`
+**Status:**
 
-**Status:** ⏳ Pending
+- **Backend:** 🟢 Completed
+- **Frontend:** ⏳ Pending
+  **Branch:** `feat/attendance-management`
 
-### Backend
+Backend features:
 
-- [ ] `GET /activities/:id/attendance`
-- [ ] `POST /activities/:id/attendance`
-- [ ] `PUT /attendance/:id`
-- [ ] `DELETE /attendance/:id`
-- [ ] Add unique `(activityId, userId)` constraint
+- [x] Attendance list
+- [x] GET /attendance/activity/:id
+- [x] GET /attendance/user/:id
+- [x] POST /attendance
+- [x] PUT /attendance/:id
+- [x] DELETE /attendance/:id
+- [x] RBAC: Members can only manage their own attendance
+- [x] All e2e tests passing
 
-### Frontend
+Optional / Future:
 
-- [ ] Attendance section on ActivityDetailPage
-- [ ] Add attendee modal (select user)
-- [ ] Status dropdown (present / late / absent)
-- [ ] Remarks editing
-- [ ] Remove attendee
+- [ ] Add unique `(userId, activityId)` constraint
+
+Pending (FE):
+
+- [ ] Attendance table under ActivityDetailPage
+- [ ] Add attendee modal (admin)
+- [ ] Status & remarks editing
+- [ ] Member self-check-in button
 
 ---
 
 ## **Phase 7 — Calendar View**
 
-**Branch:** `feat/calendar-view`
+**Status:** ⏳ Not Started
 
-**Status:** ⏳ Pending
-
-### Frontend
+Frontend:
 
 - [ ] Group activities by date
-- [ ] Vertical schedule list OR basic calendar grid
+- [ ] Basic schedule or calendar grid
 
 ---
 
 ## **Phase 8 — UI & Developer Experience Polish**
 
-**Branch:** `chore/ui-polish-and-dx`
+**Status:** ⏳ Optional / End-game\*\*
 
-**Status:** ⏳ Optional / End-game polish
-
-- [ ] Add Husky checks (lint/format)
-- [ ] README tidy-up
-- [ ] Add a 404 page
+- [ ] Husky pre-commit checks
+- [ ] Toast notifications
+- [ ] 404 page
+- [ ] Better empty/error/loading states
+- [ ] README polishing
 
 ---
