@@ -1,6 +1,6 @@
-import { Navigate, useLocation } from 'react-router-dom'
 import type { PropsWithChildren } from 'react'
-import { useAuth } from './AuthContext'
+import { Navigate, useLocation } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
 
 export const RequireAuth = ({ children }: PropsWithChildren) => {
   const { isAuthenticated, isLoading } = useAuth()
