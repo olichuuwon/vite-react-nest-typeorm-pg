@@ -1,24 +1,30 @@
-import { useQuery } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
 import { getAttendanceByUser, type AttendanceRecordDto } from '../api/attendance'
-import { useAuth } from '../context/AuthContext'
 
 export const useUserAttendance = (userId: string | undefined) => {
-  const { isAuthenticated } = useAuth()
+  const [records, setRecords] = useState<AttendanceRecordDto[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const { data, isLoading, error } = useQuery<AttendanceRecordDto[]>({
-    queryKey: ['attendance', 'byUser', userId],
-    enabled: isAuthenticated && !!userId,
-    queryFn: () => {
-      if (!userId) {
-        return Promise.reject(new Error('No userId provided'))
+  useEffect(() => {
+    if (!userId) return
+
+    const load = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+        const data = await getAttendanceByUser(userId)
+        setRecords(data)
+      } catch (err: any) {
+        console.error('useUserAttendance error', err)
+        setError('Failed to load attendance records')
+      } finally {
+        setIsLoading(false)
       }
-      return getAttendanceByUser(userId)
-    },
-  })
+    }
 
-  return {
-    records: data ?? [],
-    isLoading,
-    error,
-  }
+    load()
+  }, [userId])
+
+  return { records, isLoading, error }
 }
