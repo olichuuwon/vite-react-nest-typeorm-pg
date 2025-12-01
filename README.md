@@ -15,7 +15,7 @@ _A lightweight activity & attendance tracking system for training, units, and ad
 
 ```
 DB_HOST=localhost
-DB_PORT=5433
+DB_PORT=5432
 DB_USER=myuser
 DB_PASS=mypassword
 DB_NAME=mydb
