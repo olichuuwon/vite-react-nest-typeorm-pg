@@ -86,39 +86,25 @@ describe("ActivityService", () => {
       NotFoundException
     );
   });
-
   it("create should persist a new activity", async () => {
-    const dto = {
-      title: "New Activity",
-      description: "Desc",
-      date: null,
-      startAt: null,
-      endAt: null,
-      location: "HQ",
-      createdByUserId: "u1",
-    } as any;
+    const dto = { title: "New Activity" } as any;
+    const user = { id: "user-1" } as any;
 
-    const created: Activity = {
-      id: "new-id",
-      title: dto.title,
-      description: dto.description,
-      date: dto.date,
-      startAt: dto.startAt,
-      endAt: dto.endAt,
-      location: dto.location,
-      createdByUserId: dto.createdByUserId,
-      attendanceRecords: [],
-      createdAt: undefined as any,
-      updatedAt: undefined as any,
-      createdBy: undefined as any,
-    };
+    const created = {
+      id: "activity-1",
+      ...dto,
+      createdByUserId: user.id,
+    } as any;
 
     repo.create.mockReturnValue(created);
     repo.save.mockResolvedValue(created);
 
-    const result = await service.create(dto);
+    const result = await service.create(dto as any, user as any);
 
-    expect(repo.create).toHaveBeenCalledWith(dto);
+    expect(repo.create).toHaveBeenCalledWith({
+      ...dto,
+      createdByUserId: user.id,
+    });
     expect(repo.save).toHaveBeenCalledWith(created);
     expect(result).toBe(created);
   });
