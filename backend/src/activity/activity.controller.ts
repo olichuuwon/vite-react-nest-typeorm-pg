@@ -40,7 +40,6 @@ export class ActivityController {
   }
 
   @Post()
-  @Roles("admin")
   create(
     @Body() dto: CreateActivityDto,
     @CurrentUser() user: User
