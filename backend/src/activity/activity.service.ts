@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
@@ -56,13 +57,27 @@ export class ActivityService {
     return this.activityRepo.save(activity);
   }
 
-  async update(id: string, dto: UpdateActivityDto): Promise<Activity> {
+  async update(
+    id: string,
+    dto: UpdateActivityDto,
+    user: User
+  ): Promise<Activity> {
     const activity = await this.findOne(id);
+
+    const isAdmin = user.role === "admin";
+    const isCreator = activity.createdByUserId === user.id;
+
+    if (!isAdmin && !isCreator) {
+      throw new ForbiddenException(
+        "You are not allowed to update this activity"
+      );
+    }
+
     Object.assign(activity, dto);
     return this.activityRepo.save(activity);
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string, user: User): Promise<void> {
     // Load activity + attendance records
     const activity = await this.activityRepo.findOne({
       where: { id },
@@ -71,6 +86,15 @@ export class ActivityService {
 
     if (!activity) {
       throw new NotFoundException(`Activity with id ${id} not found`);
+    }
+
+    const isAdmin = user.role === "admin";
+    const isCreator = activity.createdByUserId === user.id;
+
+    if (!isAdmin && !isCreator) {
+      throw new ForbiddenException(
+        "You are not allowed to delete this activity"
+      );
     }
 
     // If there are attendance records, block deletion
