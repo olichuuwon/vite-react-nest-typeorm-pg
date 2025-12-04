@@ -20,7 +20,10 @@ export const LoginPage = () => {
       display="flex"
       alignItems="center"
       justifyContent="center"
-      bg="gray.50"
+      bgImage="url('/cat_bg.jpg')"
+      bgRepeat="repeat"
+      bgSize="auto"
+      bgPos="top left"
       px={4}
     >
       <Box bg="white" p={8} rounded="lg" shadow="md" w="sm" textAlign="center">
