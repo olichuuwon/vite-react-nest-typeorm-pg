@@ -28,9 +28,7 @@ export const AppLayout = () => {
 
         <VStack align="stretch" spacing={2}>
           <NavItem to="/activities" label="Activities" />
-
           {isAdmin && <NavItem to="/users" label="Users" />}
-
           <NavItem to="/calendar" label="Calendar" />
         </VStack>
       </Box>
@@ -73,8 +71,14 @@ export const AppLayout = () => {
             Logout
           </Button>
         </Flex>
-
-        <Box flex="1" p={6}>
+        <Box
+          flex="1"
+          p={6}
+          bgImage="url('/cat_bg.jpg')"
+          bgRepeat="repeat"
+          bgSize="auto"
+          bgPos="top left"
+        >
           <Outlet />
         </Box>
       </Flex>
