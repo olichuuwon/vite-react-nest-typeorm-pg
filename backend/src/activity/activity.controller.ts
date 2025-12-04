@@ -12,7 +12,6 @@ import { ActivityService } from "./activity.service";
 import { CreateActivityDto } from "./dto/create-activity.dto";
 import { UpdateActivityDto } from "./dto/update-activity.dto";
 import { Activity } from "./activity.entity";
-import { Roles } from "../auth/roles.decorator";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { User } from "../user/user.entity";
 
@@ -48,19 +47,19 @@ export class ActivityController {
   }
 
   @Put(":id")
-  @Roles("admin")
   update(
     @Param("id", new ParseUUIDPipe({ version: "4" })) id: string,
-    @Body() dto: UpdateActivityDto
+    @Body() dto: UpdateActivityDto,
+    @CurrentUser() user: User
   ): Promise<Activity> {
-    return this.activityService.update(id, dto);
+    return this.activityService.update(id, dto, user);
   }
 
   @Delete(":id")
-  @Roles("admin")
   remove(
-    @Param("id", new ParseUUIDPipe({ version: "4" })) id: string
+    @Param("id", new ParseUUIDPipe({ version: "4" })) id: string,
+    @CurrentUser() user: User
   ): Promise<void> {
-    return this.activityService.remove(id);
+    return this.activityService.remove(id, user);
   }
 }
