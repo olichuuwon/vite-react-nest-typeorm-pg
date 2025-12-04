@@ -28,9 +28,7 @@ export const AppLayout = () => {
 
         <VStack align="stretch" spacing={2}>
           <NavItem to="/activities" label="Activities" />
-
           {isAdmin && <NavItem to="/users" label="Users" />}
-
           <NavItem to="/calendar" label="Calendar" />
         </VStack>
       </Box>
@@ -51,28 +49,6 @@ export const AppLayout = () => {
               <Text fontSize="sm" color="gray.600">
                 Logged in as
               </Text>
-
-              <HStack
-                spacing={1.5}
-                px={3}
-                py={1}
-                bg="gray.100"
-                borderRadius="full"
-                color="gray.800"
-                fontSize="sm"
-                fontWeight="medium"
-              >
-                <Text>{user.name}</Text>
-                <Text fontSize="sm"> 🐾</Text>
-              </HStack>
-            </HStack>
-          )}
-
-          <Spacer />
-          <Button size="sm" variant="outline" onClick={logout}>
-            Logout
-          </Button>
-        </Flex>
 
               <HStack
                 spacing={1.5}
