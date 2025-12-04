@@ -6,7 +6,6 @@ import { LoginPage } from './pages/login/LoginPage'
 import { AppLayout } from './components/layout/AppLayout'
 
 import { ActivitiesListPage } from './pages/activities/ActivitiesListPage'
-import { ActivityDetailPage } from './pages/activities/ActivityDetailPage'
 
 import { UsersListPage } from './pages/users/UsersListPage'
 import { UserDetailPage } from './pages/users/UserDetailPage'
@@ -33,7 +32,6 @@ export const Router = () => {
 
         {/* Activities */}
         <Route path="activities" element={<ActivitiesListPage />} />
-        <Route path="activities/:activityId" element={<ActivityDetailPage />} />
 
         {/* Users – ADMIN ONLY */}
         <Route
