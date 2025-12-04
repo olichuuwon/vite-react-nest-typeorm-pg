@@ -1,30 +1,24 @@
-import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { getUserById, type UserDto } from '../api/users'
+import { useAuth } from '../context/AuthContext'
 
 export const useUser = (id: string | undefined) => {
-  const [user, setUser] = useState<UserDto | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { isAuthenticated } = useAuth()
 
-  useEffect(() => {
-    if (!id) return
-
-    const load = async () => {
-      try {
-        setIsLoading(true)
-        setError(null)
-        const data = await getUserById(id)
-        setUser(data)
-      } catch (err) {
-        console.error('useUser error', err)
-        setError('Failed to load user')
-      } finally {
-        setIsLoading(false)
+  const { data, isLoading, error } = useQuery<UserDto>({
+    queryKey: ['users', id],
+    enabled: isAuthenticated && !!id,
+    queryFn: () => {
+      if (!id) {
+        return Promise.reject(new Error('No user id provided'))
       }
-    }
+      return getUserById(id)
+    },
+  })
 
-    load()
-  }, [id])
-
-  return { user, isLoading, error }
+  return {
+    user: data ?? null,
+    isLoading,
+    error,
+  }
 }
