@@ -1,4 +1,8 @@
-import { NotFoundException } from "@nestjs/common";
+import {
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from "@nestjs/common";
 import { Repository } from "typeorm";
 import { ActivityService } from "./activity.service";
 import { Activity } from "./activity.entity";
@@ -86,6 +90,7 @@ describe("ActivityService", () => {
       NotFoundException
     );
   });
+
   it("create should persist a new activity", async () => {
     const dto = { title: "New Activity" } as any;
     const user = { id: "user-1" } as any;
@@ -109,7 +114,7 @@ describe("ActivityService", () => {
     expect(result).toBe(created);
   });
 
-  it("update should merge and save existing activity", async () => {
+  it("update should allow the creator to update their activity", async () => {
     const existing: Activity = {
       id: "abc",
       title: "Old Title",
@@ -130,31 +135,84 @@ describe("ActivityService", () => {
       location: "New HQ",
     } as any;
 
-    const updated: Activity = {
-      ...existing,
-      ...dto,
-    };
+    const user = { id: "u1", role: "user" } as any; // creator
 
     repo.findOne.mockResolvedValue(existing);
-    repo.save.mockResolvedValue(updated);
+    repo.save.mockImplementation(async (a: Activity) => a);
 
-    const result = await service.update("abc", dto);
+    const result = await service.update("abc", dto, user);
 
     expect(repo.findOne).toHaveBeenCalled();
-    expect(repo.save).toHaveBeenCalledWith(updated);
+    expect(repo.save).toHaveBeenCalled();
     expect(result.title).toBe("New Title");
     expect(result.location).toBe("New HQ");
+  });
+
+  it("update should allow admin to update any activity", async () => {
+    const existing: Activity = {
+      id: "abc",
+      title: "Old Title",
+      description: "Old desc",
+      date: undefined,
+      startAt: undefined,
+      endAt: undefined,
+      location: "Old HQ",
+      createdByUserId: "owner-id",
+      attendanceRecords: [],
+      createdAt: undefined as any,
+      updatedAt: undefined as any,
+      createdBy: undefined as any,
+    };
+
+    const dto = { title: "Admin Title" } as any;
+    const adminUser = { id: "admin-1", role: "admin" } as any;
+
+    repo.findOne.mockResolvedValue(existing);
+    repo.save.mockImplementation(async (a: Activity) => a);
+
+    const result = await service.update("abc", dto, adminUser);
+
+    expect(result.title).toBe("Admin Title");
+  });
+
+  it("update should throw ForbiddenException if user is neither admin nor creator", async () => {
+    const existing: Activity = {
+      id: "abc",
+      title: "Old Title",
+      description: "Old desc",
+      date: undefined,
+      startAt: undefined,
+      endAt: undefined,
+      location: "Old HQ",
+      createdByUserId: "owner-id",
+      attendanceRecords: [],
+      createdAt: undefined as any,
+      updatedAt: undefined as any,
+      createdBy: undefined as any,
+    };
+
+    const dto = { title: "Hack" } as any;
+    const randomUser = { id: "random-user", role: "user" } as any;
+
+    repo.findOne.mockResolvedValue(existing);
+
+    await expect(service.update("abc", dto, randomUser)).rejects.toBeInstanceOf(
+      ForbiddenException
+    );
+    expect(repo.save).not.toHaveBeenCalled();
   });
 
   it("update should throw NotFoundException if activity does not exist", async () => {
     repo.findOne.mockResolvedValue(null);
 
+    const user = { id: "u1", role: "user" } as any;
+
     await expect(
-      service.update("missing-id", { title: "X" } as any)
+      service.update("missing-id", { title: "X" } as any, user)
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
-  it("remove should delete an activity", async () => {
+  it("remove should allow creator to delete when no attendance records", async () => {
     const existing: Activity = {
       id: "abc",
       title: "To delete",
@@ -170,17 +228,98 @@ describe("ActivityService", () => {
       createdBy: undefined as any,
     };
 
+    const user = { id: "u1", role: "user" } as any; // creator
+
     repo.findOne.mockResolvedValue(existing);
     repo.remove.mockResolvedValue(existing);
 
-    await expect(service.remove("abc")).resolves.not.toThrow();
+    await expect(service.remove("abc", user)).resolves.not.toThrow();
     expect(repo.remove).toHaveBeenCalledWith(existing);
   });
 
+  it("remove should allow admin to delete any activity when no attendance records", async () => {
+    const existing: Activity = {
+      id: "abc",
+      title: "To delete",
+      description: "x",
+      date: undefined,
+      startAt: undefined,
+      endAt: undefined,
+      location: "HQ",
+      createdByUserId: "owner-id",
+      attendanceRecords: [],
+      createdAt: undefined as any,
+      updatedAt: undefined as any,
+      createdBy: undefined as any,
+    };
+
+    const adminUser = { id: "admin-1", role: "admin" } as any;
+
+    repo.findOne.mockResolvedValue(existing);
+    repo.remove.mockResolvedValue(existing);
+
+    await expect(service.remove("abc", adminUser)).resolves.not.toThrow();
+    expect(repo.remove).toHaveBeenCalledWith(existing);
+  });
+
+  it("remove should throw ForbiddenException if user is neither admin nor creator", async () => {
+    const existing: Activity = {
+      id: "abc",
+      title: "To delete",
+      description: "x",
+      date: undefined,
+      startAt: undefined,
+      endAt: undefined,
+      location: "HQ",
+      createdByUserId: "owner-id",
+      attendanceRecords: [],
+      createdAt: undefined as any,
+      updatedAt: undefined as any,
+      createdBy: undefined as any,
+    };
+
+    const randomUser = { id: "random-user", role: "user" } as any;
+
+    repo.findOne.mockResolvedValue(existing);
+
+    await expect(service.remove("abc", randomUser)).rejects.toBeInstanceOf(
+      ForbiddenException
+    );
+    expect(repo.remove).not.toHaveBeenCalled();
+  });
+
+  it("remove should throw ConflictException if activity has attendance records", async () => {
+    const existing: Activity = {
+      id: "abc",
+      title: "To delete",
+      description: "x",
+      date: undefined,
+      startAt: undefined,
+      endAt: undefined,
+      location: "HQ",
+      createdByUserId: "u1",
+      attendanceRecords: [{ id: "att-1" } as any],
+      createdAt: undefined as any,
+      updatedAt: undefined as any,
+      createdBy: undefined as any,
+    };
+
+    const user = { id: "u1", role: "user" } as any; // creator
+
+    repo.findOne.mockResolvedValue(existing);
+
+    await expect(service.remove("abc", user)).rejects.toBeInstanceOf(
+      ConflictException
+    );
+    expect(repo.remove).not.toHaveBeenCalled();
+  });
+
   it("remove should throw NotFoundException if activity not found", async () => {
+    const user = { id: "u1", role: "user" } as any;
+
     repo.findOne.mockResolvedValue(null);
 
-    await expect(service.remove("missing-id")).rejects.toBeInstanceOf(
+    await expect(service.remove("missing-id", user)).rejects.toBeInstanceOf(
       NotFoundException
     );
   });
