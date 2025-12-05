@@ -4,50 +4,71 @@ import {
   Delete,
   Get,
   Param,
-  ParseUUIDPipe,
+  Patch,
   Post,
-  Put,
+  Req,
+  Query,
 } from "@nestjs/common";
+import type { Request } from "express";
+
 import { ActivityService } from "./activity.service";
 import { CreateActivityDto } from "./dto/create-activity.dto";
 import { UpdateActivityDto } from "./dto/update-activity.dto";
+import type { ActivityDto } from "../../../shared/dto/activity.dto";
 import { Activity } from "./activity.entity";
-import { CurrentUser } from "../auth/current-user.decorator";
 import type { User } from "../user/user.entity";
+
+const toDto = (activity: Activity): ActivityDto => {
+  return {
+    id: activity.id,
+    title: activity.title,
+    description: activity.description ?? null,
+    date: activity.date ?? null,
+    startAt: activity.startAt ? activity.startAt.toISOString() : null,
+    endAt: activity.endAt ? activity.endAt.toISOString() : null,
+    location: activity.location ?? null,
+
+    createdByUserId: activity.createdByUserId ?? null,
+    createdByName:
+      (activity.createdBy as any)?.name ??
+      (activity.createdBy as any)?.identifier ??
+      null,
+
+    createdAt: activity.createdAt.toISOString(),
+    updatedAt: activity.updatedAt.toISOString(),
+  };
+};
 
 @Controller("activities")
 export class ActivityController {
   constructor(private readonly activityService: ActivityService) {}
 
   @Get()
-  findAll(): Promise<Activity[]> {
-    return this.activityService.findAll();
-  }
-
-  @Get("created-by/:userId")
-  findCreatedByUser(
-    @Param("userId", new ParseUUIDPipe({ version: "4" })) userId: string
-  ): Promise<Activity[]> {
-    return this.activityService.findCreatedByUser(userId);
+  async findAll(
+    @Query("createdByUserId") createdByUserId?: string
+  ): Promise<ActivityDto[]> {
+    const activities = await this.activityService.findAll({ createdByUserId });
+    return activities.map(toDto);
   }
 
   @Get(":id")
-  findOne(
-    @Param("id", new ParseUUIDPipe({ version: "4" })) id: string
-  ): Promise<Activity> {
-    return this.activityService.findOne(id);
+  async findOne(@Param("id") id: string): Promise<ActivityDto> {
+    const activity = await this.activityService.findOne(id);
+    return toDto(activity);
   }
 
   @Post()
-  create(
+  async create(
     @Body() dto: CreateActivityDto,
-    @CurrentUser() user: User
-  ): Promise<Activity> {
-    return this.activityService.create(dto, user);
+    @Req() req: Request
+  ): Promise<ActivityDto> {
+    const user = req.user as User;
+    const created = await this.activityService.create(dto, user);
+    return toDto(created);
   }
 
   @Patch(":id")
-async   update(
+  async update(
     @Param("id") id: string,
     @Body() dto: UpdateActivityDto
   ): Promise<ActivityDto> {
@@ -56,10 +77,7 @@ async   update(
   }
 
   @Delete(":id")
-  remove(
-    @Param("id", new ParseUUIDPipe({ version: "4" })) id: string,
-    @CurrentUser() user: User
-  ): Promise<void> {
-    return this.activityService.remove(id, user);
+  remove(@Param("id") id: string): Promise<void> {
+    return this.activityService.remove(id);
   }
 }
