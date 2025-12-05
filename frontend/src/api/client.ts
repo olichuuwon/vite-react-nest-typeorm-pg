@@ -11,3 +11,18 @@ export function setAuthToken(token: string | null) {
     delete api.defaults.headers.common['Authorization']
   }
 }
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status
+
+    if (status === 401) {
+      localStorage.removeItem('app_token')
+      localStorage.removeItem('app_user')
+      window.location.href = '/login'
+    }
+
+    return Promise.reject(error)
+  },
+)
