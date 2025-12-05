@@ -36,10 +36,10 @@ export class Activity {
 
   @ManyToOne(() => User, (user) => user.createdActivities, { nullable: true })
   @JoinColumn({ name: "createdByUserId" })
-  createdBy?: User;
+  createdBy?: User | null;
 
   @Column({ type: "uuid", nullable: true })
-  createdByUserId?: string;
+  createdByUserId?: string | null;
 
   @OneToMany(() => AttendanceRecord, (att) => att.activity)
   attendanceRecords: AttendanceRecord[];
