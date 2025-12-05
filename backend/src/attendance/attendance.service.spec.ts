@@ -2,8 +2,6 @@ import { NotFoundException } from "@nestjs/common";
 import { Repository } from "typeorm";
 import { AttendanceService } from "./attendance.service";
 import { AttendanceRecord } from "./attendance.entity";
-import { User } from "../user/user.entity";
-import { Activity } from "../activity/activity.entity";
 
 const createAttendanceRepo = () =>
   ({
@@ -12,33 +10,18 @@ const createAttendanceRepo = () =>
     create: jest.fn(),
     save: jest.fn(),
     delete: jest.fn(),
-  }) as any;
-
-const createUserRepo = () =>
-  ({
-    findOne: jest.fn(),
-  }) as any;
-
-const createActivityRepo = () =>
-  ({
-    findOne: jest.fn(),
+    merge: jest.fn(),
   }) as any;
 
 describe("AttendanceService", () => {
   let service: AttendanceService;
   let attendanceRepo: any;
-  let userRepo: any;
-  let activityRepo: any;
 
   beforeEach(() => {
     attendanceRepo = createAttendanceRepo();
-    userRepo = createUserRepo();
-    activityRepo = createActivityRepo();
 
     service = new AttendanceService(
-      attendanceRepo as Repository<AttendanceRecord>,
-      userRepo as Repository<User>,
-      activityRepo as Repository<Activity>
+      attendanceRepo as Repository<AttendanceRecord>
     );
   });
 
@@ -90,7 +73,6 @@ describe("AttendanceService", () => {
 
     expect(attendanceRepo.findOne).toHaveBeenCalledWith({
       where: { id: "abc" },
-      // Match actual implementation ordering: ["activity", "user"]
       relations: ["activity", "user"],
     });
     expect(result).toBe(record);
@@ -112,16 +94,13 @@ describe("AttendanceService", () => {
       remarks: "Hello",
     } as any;
 
-    userRepo.findOne.mockResolvedValue({ id: "u1" } as User);
-    activityRepo.findOne.mockResolvedValue({ id: "a1" } as Activity);
-
     const created: AttendanceRecord = {
       id: "new-id",
       userId: dto.userId,
       activityId: dto.activityId,
-      status: dto.status,
+      status: dto.status as any,
       remarks: dto.remarks,
-      checkedInAt: undefined,
+      checkedInAt: new Date(),
       user: undefined as any,
       activity: undefined as any,
       createdAt: undefined as any,
@@ -133,7 +112,14 @@ describe("AttendanceService", () => {
 
     const result = await service.create(dto);
 
-    expect(attendanceRepo.create).toHaveBeenCalledWith(dto);
+    expect(attendanceRepo.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: "u1",
+        activityId: "a1",
+        status: "present",
+        remarks: "Hello",
+      })
+    );
     expect(attendanceRepo.save).toHaveBeenCalledWith(created);
     expect(result).toBe(created);
   });
@@ -157,18 +143,23 @@ describe("AttendanceService", () => {
       remarks: "Arrived late",
     } as any;
 
-    const updated: AttendanceRecord = {
+    const merged: AttendanceRecord = {
       ...existing,
       ...dto,
     };
 
     attendanceRepo.findOne.mockResolvedValue(existing);
-    attendanceRepo.save.mockResolvedValue(updated);
+    attendanceRepo.merge.mockReturnValue(merged);
+    attendanceRepo.save.mockResolvedValue(merged);
 
     const result = await service.update("abc", dto);
 
-    expect(attendanceRepo.findOne).toHaveBeenCalled();
-    expect(attendanceRepo.save).toHaveBeenCalledWith(updated);
+    expect(attendanceRepo.findOne).toHaveBeenCalledWith({
+      where: { id: "abc" },
+      relations: ["activity", "user"],
+    });
+    expect(attendanceRepo.merge).toHaveBeenCalled();
+    expect(attendanceRepo.save).toHaveBeenCalledWith(merged);
     expect(result.status).toBe("late");
     expect(result.remarks).toBe("Arrived late");
   });
