@@ -6,6 +6,7 @@ import { LoginPage } from './pages/login/LoginPage'
 import { AppLayout } from './components/layout/AppLayout'
 
 import { ActivitiesListPage } from './pages/activities/ActivitiesListPage'
+import { AdminActivityAttendancePage } from './pages/activities/AdminActivityAttendancePage'
 
 import { UsersListPage } from './pages/users/UsersListPage'
 import { UserDetailPage } from './pages/users/UserDetailPage'
@@ -32,6 +33,16 @@ export const Router = () => {
 
         {/* Activities */}
         <Route path="activities" element={<ActivitiesListPage />} />
+
+        {/* Admin: activity attendance view */}
+        <Route
+          path="admin/activities/:activityId/attendance"
+          element={
+            <RequireAdmin>
+              <AdminActivityAttendancePage />
+            </RequireAdmin>
+          }
+        />
 
         {/* Users – ADMIN ONLY */}
         <Route
