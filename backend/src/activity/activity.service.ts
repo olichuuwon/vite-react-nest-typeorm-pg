@@ -18,9 +18,17 @@ export class ActivityService {
     private readonly activityRepo: Repository<Activity>
   ) {}
 
-  findAll(): Promise<Activity[]> {
+async   findAll(filter?: { createdByUserId?: string }): Promise<Activity[]> {
+const where: Record<string, any> = {};
+
+    if (filter?.createdByUserId) {
+      where.createdByUserId = filter.createdByUserId;
+    }
+
     return this.activityRepo.find({
-      relations: ["createdBy", "attendanceRecords"],
+where,
+      relations: ["createdBy"],
+      order: { date: "ASC", createdAt: "DESC" },
     });
   }
 
