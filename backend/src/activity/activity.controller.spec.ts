@@ -8,6 +8,8 @@ describe("ActivityController", () => {
   let controller: ActivityController;
   let service: ActivityService;
 
+  const mockUser = { id: "user-1" } as any;
+
   const mockService = {
     findAll: jest.fn(),
     findOne: jest.fn(),
@@ -60,14 +62,14 @@ describe("ActivityController", () => {
   });
 
   it("create should delegate to service.create", async () => {
-    const dto = { title: "New Activity" };
-    const activity = createMockActivity({ id: "1", title: "New Activity" });
+    const dto = { title: "New Activity" } as any;
+    const activity = { id: "1", ...dto } as any;
 
     mockService.create.mockResolvedValue(activity);
 
-    const result = await controller.create(dto as any);
+    const result = await controller.create(dto as any, mockUser as any);
 
-    expect(mockService.create).toHaveBeenCalledWith(dto);
+    expect(mockService.create).toHaveBeenCalledWith(dto, mockUser);
     expect(result).toBe(activity);
   });
 

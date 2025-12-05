@@ -3,26 +3,20 @@ import {
   Button,
   Heading,
   HStack,
-  Table,
-  Tbody,
-  Td,
-  Th,
-  Thead,
-  Tr,
-  Spinner,
   Text,
+  useDisclosure,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  ModalCloseButton,
 } from '@chakra-ui/react'
-import { useNavigate } from 'react-router-dom'
-import { useActivities } from '../../hooks/useActivities'
-import {
-  type ColumnDef,
-  type SortingState,
-  flexRender,
-  getCoreRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from '@tanstack/react-table'
 import { useMemo, useState } from 'react'
+import { type ColumnDef } from '@tanstack/react-table'
+import { useActivities } from '../../hooks/useActivities'
+import { DataTable } from '../../components/DataTable'
 
 type Activity = {
   id: string
@@ -31,22 +25,26 @@ type Activity = {
   location?: string | null
 }
 
-const getSortIcon = (state?: string) => {
-  switch (state) {
-    case 'desc':
-      return ' ↑'
-    case 'asc':
-      return ' ↓'
-    default:
-      return ' ⇅'
-  }
-}
-
 export const ActivitiesListPage = () => {
-  const navigate = useNavigate()
   const { activities, isLoading, error } = useActivities()
 
-  const [sorting, setSorting] = useState<SortingState>([])
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null)
+
+  const { isOpen: isCreateOpen, onOpen: onOpenCreate, onClose: onCloseCreate } = useDisclosure()
+
+  const { isOpen: isViewOpen, onOpen: onOpenView, onClose: onCloseView } = useDisclosure()
+
+  const { isOpen: isCheckInOpen, onOpen: onOpenCheckIn, onClose: onCloseCheckIn } = useDisclosure()
+
+  const handleOpenView = (activity: Activity) => {
+    setSelectedActivity(activity)
+    onOpenView()
+  }
+
+  const handleOpenCheckIn = (activity: Activity) => {
+    setSelectedActivity(activity)
+    onOpenCheckIn()
+  }
 
   const columns = useMemo<ColumnDef<Activity>[]>(
     () => [
@@ -58,7 +56,14 @@ export const ActivitiesListPage = () => {
       {
         accessorKey: 'date',
         header: 'Date',
-        cell: (info) => (info.getValue() as string | null | undefined) ?? '-',
+        cell: (info) => {
+          const value = info.getValue() as string | null | undefined
+          if (!value) return '-'
+
+          return new Date(value).toLocaleDateString('en-SG', {
+            dateStyle: 'medium',
+          })
+        },
       },
       {
         accessorKey: 'location',
@@ -68,94 +73,170 @@ export const ActivitiesListPage = () => {
       {
         id: 'actions',
         header: '',
-        cell: ({ row }) => (
-          <Button
-            size="xs"
-            variant="outline"
-            onClick={() => navigate(`/activities/${row.original.id}`)}
-          >
-            View
-          </Button>
-        ),
+        enableSorting: false,
+        cell: ({ row }) => {
+          const activity = row.original
+
+          return (
+            <HStack spacing={2} justify="flex-end">
+              <Text
+                as="button"
+                fontSize="xs"
+                px={3}
+                py={1}
+                borderWidth="1px"
+                borderRadius="md"
+                onClick={() => handleOpenCheckIn(activity)}
+              >
+                Check in
+              </Text>
+              <Text
+                as="button"
+                fontSize="xs"
+                px={3}
+                py={1}
+                borderWidth="1px"
+                borderRadius="md"
+                onClick={() => handleOpenView(activity)}
+              >
+                View details
+              </Text>
+            </HStack>
+          )
+        },
       },
     ],
-    [navigate],
+    [handleOpenCheckIn, handleOpenView],
   )
-
-  const table = useReactTable<Activity>({
-    data: (activities ?? []) as Activity[],
-    columns,
-    state: {
-      sorting,
-    },
-    onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-  })
 
   return (
     <Box>
-      <HStack justify="space-between" mb={4}>
-        <Heading size="md">Activities</Heading>
-        <Button colorScheme="blue">+ Create Activity</Button>
-      </HStack>
+      <Box
+        bg="white"
+        p={6}
+        rounded="lg"
+        shadow="sm"
+        borderWidth="1px"
+        borderColor="gray.200"
+        w="100%"
+      >
+        <HStack justify="space-between" mb={4}>
+          <Heading size="md">Activities</Heading>
 
-      <Box bg="white" p={4} rounded="lg" shadow="sm">
-        {isLoading ? (
-          <HStack>
-            <Spinner size="sm" />
-            <Text fontSize="sm">Loading activities…</Text>
-          </HStack>
-        ) : error ? (
-          <Text fontSize="sm" color="red.500">
-            {error}
-          </Text>
-        ) : (
-          <Table size="sm">
-            <Thead bg="gray.50">
-              {table.getHeaderGroups().map((headerGroup) => (
-                <Tr key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <Th
-                      key={header.id}
-                      cursor={header.column.getCanSort() ? 'pointer' : 'default'}
-                      onClick={header.column.getToggleSortingHandler()}
-                    >
-                      {flexRender(header.column.columnDef.header, header.getContext())}
-                      {header.column.getCanSort() && (
-                        <Text as="span" ml={1}>
-                          {getSortIcon(header.column.getIsSorted() as string | undefined)}
-                        </Text>
-                      )}
-                    </Th>
-                  ))}
-                </Tr>
-              ))}
-            </Thead>
-            <Tbody>
-              {table.getRowModel().rows.map((row) => (
-                <Tr key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <Td key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </Td>
-                  ))}
-                </Tr>
-              ))}
+          <Button size="sm" colorScheme="blue" onClick={onOpenCreate}>
+            Create activity
+          </Button>
+        </HStack>
 
-              {(!activities || activities.length === 0) && (
-                <Tr>
-                  <Td colSpan={4}>
-                    <Text fontSize="sm" color="gray.500">
-                      No activities found.
-                    </Text>
-                  </Td>
-                </Tr>
-              )}
-            </Tbody>
-          </Table>
-        )}
+        <DataTable<Activity>
+          columns={columns}
+          data={(activities ?? []) as Activity[]}
+          isLoading={isLoading}
+          error={error ?? null}
+          emptyText="No activities found."
+          getRowId={(row) => row.id}
+          tableSize="sm"
+        />
       </Box>
+
+      {/* Create Activity modal */}
+      <Modal isOpen={isCreateOpen} onClose={onCloseCreate} size="lg">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Create activity</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <Text fontSize="sm" color="gray.600">
+              TODO: activity creation form.
+            </Text>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={onCloseCreate}>
+              Cancel
+            </Button>
+            <Button colorScheme="blue" isDisabled>
+              Comfirm
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+      {/* View Activity modal */}
+      <Modal isOpen={isViewOpen} onClose={onCloseView} size="lg">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Activity details</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            {selectedActivity ? (
+              <>
+                <Heading size="sm" mb={1}>
+                  {selectedActivity.title}
+                </Heading>
+
+                <Text fontSize="sm" color="gray.600">
+                  {selectedActivity.date
+                    ? new Date(selectedActivity.date).toLocaleDateString('en-SG', {
+                        dateStyle: 'medium',
+                      })
+                    : 'No date set'}
+                </Text>
+
+                <Text fontSize="sm" color="gray.600">
+                  {selectedActivity.location || 'No location set'}
+                </Text>
+              </>
+            ) : (
+              <Text fontSize="sm" color="gray.500">
+                No activity selected.
+              </Text>
+            )}
+          </ModalBody>
+
+          <ModalFooter gap={3}>
+            <Button variant="ghost" onClick={onCloseView}>
+              Close
+            </Button>
+
+            {selectedActivity && (
+              <Button
+                colorScheme="blue"
+                onClick={() => {
+                  onCloseView()
+                  onOpenCheckIn()
+                }}
+              >
+                Proceed to check in
+              </Button>
+            )}
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Check-in modal */}
+      <Modal isOpen={isCheckInOpen} onClose={onCloseCheckIn}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Check in</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            {selectedActivity ? (
+              <Text fontSize="sm">TODO: check-in for {selectedActivity.title}.</Text>
+            ) : (
+              <Text fontSize="sm" color="gray.500">
+                No activity selected.
+              </Text>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={onCloseCheckIn}>
+              Cancel
+            </Button>
+            <Button colorScheme="blue" isDisabled>
+              Confirm
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Box>
   )
 }

@@ -8,6 +8,7 @@ import { Repository } from "typeorm";
 import { Activity } from "./activity.entity";
 import { CreateActivityDto } from "./dto/create-activity.dto";
 import { UpdateActivityDto } from "./dto/update-activity.dto";
+import type { User } from "../user/user.entity";
 
 @Injectable()
 export class ActivityService {
@@ -35,9 +36,21 @@ export class ActivityService {
     return activity;
   }
 
-  async create(dto: CreateActivityDto): Promise<Activity> {
+  async findCreatedByUser(userId: string): Promise<Activity[]> {
+    return this.activityRepo.find({
+      where: { createdByUserId: userId },
+      relations: ["createdBy", "attendanceRecords"],
+      order: {
+        date: "DESC",
+        createdAt: "DESC",
+      },
+    });
+  }
+
+  async create(dto: CreateActivityDto, user: User): Promise<Activity> {
     const activity = this.activityRepo.create({
       ...dto,
+      createdByUserId: user.id,
     });
 
     return this.activityRepo.save(activity);
