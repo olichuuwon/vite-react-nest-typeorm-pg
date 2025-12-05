@@ -1,9 +1,4 @@
-import {
-  ConflictException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { Activity } from "./activity.entity";
@@ -18,15 +13,15 @@ export class ActivityService {
     private readonly activityRepo: Repository<Activity>
   ) {}
 
-async   findAll(filter?: { createdByUserId?: string }): Promise<Activity[]> {
-const where: Record<string, any> = {};
+  async findAll(filter?: { createdByUserId?: string }): Promise<Activity[]> {
+    const where: Record<string, any> = {};
 
     if (filter?.createdByUserId) {
       where.createdByUserId = filter.createdByUserId;
     }
 
     return this.activityRepo.find({
-where,
+      where,
       relations: ["createdBy"],
       order: { date: "ASC", createdAt: "DESC" },
     });
@@ -35,7 +30,7 @@ where,
   async findOne(id: string): Promise<Activity> {
     const activity = await this.activityRepo.findOne({
       where: { id },
-      relations: ["createdBy", "attendanceRecords"],
+      relations: ["createdBy"],
     });
 
     if (!activity) {
@@ -45,73 +40,45 @@ where,
     return activity;
   }
 
-  async findCreatedByUser(userId: string): Promise<Activity[]> {
-    return this.activityRepo.find({
-      where: { createdByUserId: userId },
-      relations: ["createdBy", "attendanceRecords"],
-      order: {
-        date: "DESC",
-        createdAt: "DESC",
-      },
-    });
-  }
-
-  async create(dto: CreateActivityDto, user: User): Promise<Activity> {
+  async create(dto: CreateActivityDto, creator: User): Promise<Activity> {
     const activity = this.activityRepo.create({
-      ...dto,
-      createdByUserId: user.id,
+      title: dto.title,
+      description: dto.description,
+      date: dto.date,
+      startAt: dto.startAt ? new Date(dto.startAt) : undefined,
+      endAt: dto.endAt ? new Date(dto.endAt) : undefined,
+      location: dto.location,
+      createdByUserId: creator.id,
     });
 
-    return this.activityRepo.save(activity);
+    const saved = await this.activityRepo.save(activity);
+
+    return this.findOne(saved.id);
   }
 
-  async update(
-    id: string,
-    dto: UpdateActivityDto,
-    user: User
-  ): Promise<Activity> {
-    const activity = await this.findOne(id);
+  async update(id: string, dto: UpdateActivityDto): Promise<Activity> {
+    const existing = await this.activityRepo.findOne({ where: { id } });
 
-    const isAdmin = user.role === "admin";
-    const isCreator = activity.createdByUserId === user.id;
-
-    if (!isAdmin && !isCreator) {
-      throw new ForbiddenException(
-        "You are not allowed to update this activity"
-      );
-    }
-
-    Object.assign(activity, dto);
-    return this.activityRepo.save(activity);
-  }
-
-  async remove(id: string, user: User): Promise<void> {
-    // Load activity + attendance records
-    const activity = await this.activityRepo.findOne({
-      where: { id },
-      relations: ["attendanceRecords"],
-    });
-
-    if (!activity) {
+    if (!existing) {
       throw new NotFoundException(`Activity with id ${id} not found`);
     }
 
-    const isAdmin = user.role === "admin";
-    const isCreator = activity.createdByUserId === user.id;
+    const merged = this.activityRepo.merge(existing, {
+      ...dto,
+      startAt: dto.startAt ? new Date(dto.startAt) : existing.startAt,
+      endAt: dto.endAt ? new Date(dto.endAt) : existing.endAt,
+    });
 
-    if (!isAdmin && !isCreator) {
-      throw new ForbiddenException(
-        "You are not allowed to delete this activity"
-      );
+    const saved = await this.activityRepo.save(merged);
+
+    return this.findOne(saved.id);
+  }
+
+  async remove(id: string): Promise<void> {
+    const result = await this.activityRepo.delete(id);
+
+    if (result.affected === 0) {
+      throw new NotFoundException(`Activity with id ${id} not found`);
     }
-
-    // If there are attendance records, block deletion
-    if (activity.attendanceRecords && activity.attendanceRecords.length > 0) {
-      throw new ConflictException(
-        "Cannot delete activity with existing attendance records"
-      );
-    }
-
-    await this.activityRepo.remove(activity);
   }
 }
