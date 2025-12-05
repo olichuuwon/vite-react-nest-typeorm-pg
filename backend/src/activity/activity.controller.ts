@@ -46,13 +46,13 @@ export class ActivityController {
     return this.activityService.create(dto, user);
   }
 
-  @Put(":id")
-  update(
-    @Param("id", new ParseUUIDPipe({ version: "4" })) id: string,
-    @Body() dto: UpdateActivityDto,
-    @CurrentUser() user: User
-  ): Promise<Activity> {
-    return this.activityService.update(id, dto, user);
+  @Patch(":id")
+async   update(
+    @Param("id") id: string,
+    @Body() dto: UpdateActivityDto
+  ): Promise<ActivityDto> {
+    const updated = await this.activityService.update(id, dto);
+    return toDto(updated);
   }
 
   @Delete(":id")
