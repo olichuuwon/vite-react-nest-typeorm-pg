@@ -3,7 +3,6 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  IsUUID,
   MaxLength,
 } from "class-validator";
 
@@ -33,8 +32,4 @@ export class CreateActivityDto {
   @IsOptional()
   @MaxLength(255)
   location?: string;
-
-  @IsUUID()
-  @IsOptional()
-  createdByUserId?: string;
 }
