@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { getActivitiesCreatedBy, type ActivityDto } from '../api/activities'
+import { getActivitiesCreatedBy } from '../api/activities'
+import type { ActivityDto } from '../../../shared/dto/activity.dto'
 import { useAuth } from '../context/AuthContext'
 
 export const useUserCreatedActivities = (userId: string | undefined) => {

@@ -1,32 +1,39 @@
-import {
-  Box,
-  Button,
-  Heading,
-  HStack,
-  Text,
-  useDisclosure,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  ModalCloseButton,
-} from '@chakra-ui/react'
+import { Box, Button, Heading, HStack, useDisclosure } from '@chakra-ui/react'
 import { useMemo, useState } from 'react'
 import { type ColumnDef } from '@tanstack/react-table'
-import { useActivities } from '../../hooks/useActivities'
-import { DataTable } from '../../components/DataTable'
+import { useNavigate } from 'react-router-dom'
 
-type Activity = {
-  id: string
-  title: string
-  date?: string | null
-  location?: string | null
+import { useActivities } from '../../hooks/useActivities'
+import { useUserAttendance } from '../../hooks/useUserAttendance'
+import { useAuth } from '../../context/AuthContext'
+import { DataTable } from '../../components/DataTable'
+import type { AttendanceRecordDto } from '../../../../shared/dto/attendance.dto'
+import type { ActivityDto } from '../../../../shared/dto/activity.dto'
+
+import { CreateActivityModal } from './CreateActivityModal'
+import { ViewActivityModal } from './ViewActivityModal'
+import { MarkAttendanceModal } from './MarkAttendanceModal'
+
+type Activity = ActivityDto
+
+const getErrorMessage = (err: unknown): string | null => {
+  if (!err) return null
+  if (typeof err === 'string') return err
+  if (err instanceof Error) return err.message
+  return 'Something went wrong'
 }
 
 export const ActivitiesListPage = () => {
-  const { activities, isLoading, error } = useActivities()
+  const navigate = useNavigate()
+  const { user: me, isAuthenticated } = useAuth()
+
+  const { activities, isLoading: isActivitiesLoading, error: activitiesError } = useActivities()
+
+  const {
+    records: attendanceRecords,
+    isLoading: isAttendanceLoading,
+    error: attendanceError,
+  } = useUserAttendance(me?.id)
 
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null)
 
@@ -34,80 +41,105 @@ export const ActivitiesListPage = () => {
 
   const { isOpen: isViewOpen, onOpen: onOpenView, onClose: onCloseView } = useDisclosure()
 
-  const { isOpen: isCheckInOpen, onOpen: onOpenCheckIn, onClose: onCloseCheckIn } = useDisclosure()
+  const { isOpen: isMarkOpen, onOpen: onOpenMark, onClose: onCloseMark } = useDisclosure()
 
-  const handleOpenView = (activity: Activity) => {
-    setSelectedActivity(activity)
-    onOpenView()
-  }
+  // Map of activityId -> attendance record for current user
+  const attendanceByActivityId = useMemo(() => {
+    const map = new Map<string, AttendanceRecordDto>()
+    for (const record of attendanceRecords ?? []) {
+      map.set(record.activityId, record)
+    }
+    return map
+  }, [attendanceRecords])
 
-  const handleOpenCheckIn = (activity: Activity) => {
-    setSelectedActivity(activity)
-    onOpenCheckIn()
-  }
+  const hasAttendanceForActivity = (activityId: string) => attendanceByActivityId.has(activityId)
 
-  const columns = useMemo<ColumnDef<Activity>[]>(
-    () => [
-      {
-        accessorKey: 'title',
-        header: 'Title',
-        cell: (info) => info.getValue() as string,
+  const columns: ColumnDef<Activity>[] = [
+    {
+      accessorKey: 'title',
+      header: 'Title',
+      cell: (info) => info.getValue() as string,
+    },
+    {
+      accessorKey: 'date',
+      header: 'Date',
+      cell: (info) => {
+        const value = info.getValue() as string | null | undefined
+        if (!value) return '-'
+
+        return new Date(value).toLocaleDateString('en-SG', {
+          dateStyle: 'medium',
+        })
       },
-      {
-        accessorKey: 'date',
-        header: 'Date',
-        cell: (info) => {
-          const value = info.getValue() as string | null | undefined
-          if (!value) return '-'
+    },
+    {
+      accessorKey: 'location',
+      header: 'Location',
+      cell: (info) => (info.getValue() as string | null | undefined) ?? '-',
+    },
+    {
+      id: 'actions',
+      header: '',
+      enableSorting: false,
+      cell: ({ row }) => {
+        const activity = row.original
+        const hasMarked = hasAttendanceForActivity(activity.id)
 
-          return new Date(value).toLocaleDateString('en-SG', {
-            dateStyle: 'medium',
-          })
-        },
-      },
-      {
-        accessorKey: 'location',
-        header: 'Location',
-        cell: (info) => (info.getValue() as string | null | undefined) ?? '-',
-      },
-      {
-        id: 'actions',
-        header: '',
-        enableSorting: false,
-        cell: ({ row }) => {
-          const activity = row.original
+        const canViewAdminAttendance = me?.role === 'admin'
 
-          return (
-            <HStack spacing={2} justify="flex-end">
-              <Text
-                as="button"
-                fontSize="xs"
-                px={3}
-                py={1}
-                borderWidth="1px"
-                borderRadius="md"
-                onClick={() => handleOpenCheckIn(activity)}
+        return (
+          <HStack spacing={2} justify="flex-end">
+            <Button
+              variant="outline"
+              size="xs"
+              onClick={() => {
+                setSelectedActivity(activity)
+                onOpenView()
+              }}
+            >
+              View details
+            </Button>
+
+            <Button
+              variant="outline"
+              size="xs"
+              onClick={() => {
+                if (!hasMarked && isAuthenticated) {
+                  setSelectedActivity(activity)
+                  onOpenMark()
+                }
+              }}
+              isDisabled={hasMarked || !isAuthenticated}
+            >
+              {hasMarked ? 'Attendance marked' : 'Mark attendance'}
+            </Button>
+
+            {canViewAdminAttendance && (
+              <Button
+                variant="outline"
+                size="xs"
+                onClick={() => {
+                  navigate(`/admin/activities/${activity.id}/attendance`)
+                }}
               >
-                Check in
-              </Text>
-              <Text
-                as="button"
-                fontSize="xs"
-                px={3}
-                py={1}
-                borderWidth="1px"
-                borderRadius="md"
-                onClick={() => handleOpenView(activity)}
-              >
-                View details
-              </Text>
-            </HStack>
-          )
-        },
+                Manage attendance
+              </Button>
+            )}
+          </HStack>
+        )
       },
-    ],
-    [handleOpenCheckIn, handleOpenView],
-  )
+    },
+  ]
+
+  const combinedError: string | null =
+    getErrorMessage(activitiesError) || getErrorMessage(attendanceError)
+
+  const isAnyLoading = isActivitiesLoading || isAttendanceLoading
+
+  const selectedAttendance = selectedActivity && attendanceByActivityId.get(selectedActivity.id)
+
+  const canMarkSelected =
+    !!selectedActivity && !!me && !attendanceByActivityId.has(selectedActivity.id)
 
   return (
     <Box>
@@ -123,7 +155,7 @@ export const ActivitiesListPage = () => {
         <HStack justify="space-between" mb={4}>
           <Heading size="md">Activities</Heading>
 
-          <Button size="sm" colorScheme="blue" onClick={onOpenCreate}>
+          <Button size="sm" colorScheme="blue" onClick={onOpenCreate} isDisabled={!isAuthenticated}>
             Create activity
           </Button>
         </HStack>
@@ -131,112 +163,30 @@ export const ActivitiesListPage = () => {
         <DataTable<Activity>
           columns={columns}
           data={(activities ?? []) as Activity[]}
-          isLoading={isLoading}
-          error={error ?? null}
+          isLoading={isAnyLoading}
+          error={combinedError}
           emptyText="No activities found."
           getRowId={(row) => row.id}
           tableSize="sm"
         />
       </Box>
 
-      {/* Create Activity modal */}
-      <Modal isOpen={isCreateOpen} onClose={onCloseCreate} size="lg">
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Create activity</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            <Text fontSize="sm" color="gray.600">
-              TODO: activity creation form.
-            </Text>
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={onCloseCreate}>
-              Cancel
-            </Button>
-            <Button colorScheme="blue" isDisabled>
-              Comfirm
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-      {/* View Activity modal */}
-      <Modal isOpen={isViewOpen} onClose={onCloseView} size="lg">
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Activity details</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            {selectedActivity ? (
-              <>
-                <Heading size="sm" mb={1}>
-                  {selectedActivity.title}
-                </Heading>
+      <CreateActivityModal isOpen={isCreateOpen} onClose={onCloseCreate} />
 
-                <Text fontSize="sm" color="gray.600">
-                  {selectedActivity.date
-                    ? new Date(selectedActivity.date).toLocaleDateString('en-SG', {
-                        dateStyle: 'medium',
-                      })
-                    : 'No date set'}
-                </Text>
+      <ViewActivityModal
+        isOpen={isViewOpen}
+        onClose={onCloseView}
+        activity={selectedActivity}
+        attendance={selectedAttendance ?? null}
+      />
 
-                <Text fontSize="sm" color="gray.600">
-                  {selectedActivity.location || 'No location set'}
-                </Text>
-              </>
-            ) : (
-              <Text fontSize="sm" color="gray.500">
-                No activity selected.
-              </Text>
-            )}
-          </ModalBody>
-
-          <ModalFooter gap={3}>
-            <Button variant="ghost" onClick={onCloseView}>
-              Close
-            </Button>
-
-            {selectedActivity && (
-              <Button
-                colorScheme="blue"
-                onClick={() => {
-                  onCloseView()
-                  onOpenCheckIn()
-                }}
-              >
-                Proceed to check in
-              </Button>
-            )}
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-
-      {/* Check-in modal */}
-      <Modal isOpen={isCheckInOpen} onClose={onCloseCheckIn}>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Check in</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            {selectedActivity ? (
-              <Text fontSize="sm">TODO: check-in for {selectedActivity.title}.</Text>
-            ) : (
-              <Text fontSize="sm" color="gray.500">
-                No activity selected.
-              </Text>
-            )}
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={onCloseCheckIn}>
-              Cancel
-            </Button>
-            <Button colorScheme="blue" isDisabled>
-              Confirm
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+      <MarkAttendanceModal
+        isOpen={isMarkOpen}
+        onClose={onCloseMark}
+        activity={selectedActivity}
+        currentUserId={me?.id ?? null}
+        canMark={canMarkSelected}
+      />
     </Box>
   )
 }

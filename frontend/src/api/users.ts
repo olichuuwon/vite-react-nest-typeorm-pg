@@ -1,14 +1,5 @@
 import { api } from './client'
-
-export type UserDto = {
-  id: string
-  name: string
-  identifier: string
-  email?: string | null
-  role: 'admin' | 'member'
-  createdAt: string
-  updatedAt: string
-}
+import type { UserDto } from './../../../shared/dto/user.dto'
 
 export async function getUsers(): Promise<UserDto[]> {
   const res = await api.get<UserDto[]>('/users')

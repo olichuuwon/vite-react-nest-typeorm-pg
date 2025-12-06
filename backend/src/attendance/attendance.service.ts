@@ -1,30 +1,21 @@
-import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-} from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { AttendanceRecord } from "./attendance.entity";
 import { CreateAttendanceDto } from "./dto/create-attendance.dto";
 import { UpdateAttendanceDto } from "./dto/update-attendance.dto";
-import { User } from "../user/user.entity";
-import { Activity } from "../activity/activity.entity";
 
 @Injectable()
 export class AttendanceService {
   constructor(
     @InjectRepository(AttendanceRecord)
-    private readonly attendanceRepo: Repository<AttendanceRecord>,
-    @InjectRepository(User)
-    private readonly userRepo: Repository<User>,
-    @InjectRepository(Activity)
-    private readonly activityRepo: Repository<Activity>
+    private readonly attendanceRepo: Repository<AttendanceRecord>
   ) {}
 
   findAll(): Promise<AttendanceRecord[]> {
     return this.attendanceRepo.find({
       relations: ["activity", "user"],
+      order: { createdAt: "ASC" },
     });
   }
 
@@ -35,43 +26,43 @@ export class AttendanceService {
     });
 
     if (!record) {
-      throw new NotFoundException(`Attendance record with id ${id} not found`);
+      throw new NotFoundException(`Attendance record ${id} not found`);
     }
 
     return record;
   }
 
+  async remove(id: string): Promise<void> {
+    const result = await this.attendanceRepo.delete(id);
+
+    if (result.affected === 0) {
+      throw new NotFoundException(`Attendance record ${id} not found`);
+    }
+  }
+
+  findByActivity(activityId: string): Promise<AttendanceRecord[]> {
+    return this.attendanceRepo.find({
+      where: { activityId },
+      relations: ["activity", "user"],
+      order: { createdAt: "ASC" },
+    });
+  }
+
+  findByUser(userId: string): Promise<AttendanceRecord[]> {
+    return this.attendanceRepo.find({
+      where: { userId },
+      relations: ["activity", "user"],
+      order: { createdAt: "ASC" },
+    });
+  }
+
   async create(dto: CreateAttendanceDto): Promise<AttendanceRecord> {
-    const user = await this.userRepo.findOne({ where: { id: dto.userId } });
-    if (!user) {
-      throw new NotFoundException(`User with id ${dto.userId} not found`);
-    }
-
-    const activity = await this.activityRepo.findOne({
-      where: { id: dto.activityId },
-    });
-    if (!activity) {
-      throw new NotFoundException(
-        `Activity with id ${dto.activityId} not found`
-      );
-    }
-
-    const existing = await this.attendanceRepo.findOne({
-      where: {
-        userId: dto.userId,
-        activityId: dto.activityId,
-      },
-    });
-
-    if (existing) {
-      throw new ConflictException(
-        `Attendance already exists for user ${dto.userId} and activity ${dto.activityId}`
-      );
-    }
+    const now = new Date();
 
     const record = this.attendanceRepo.create({
       ...dto,
       status: dto.status ?? "present",
+      checkedInAt: dto.checkedInAt ? new Date(dto.checkedInAt) : now,
     });
 
     return this.attendanceRepo.save(record);
@@ -81,30 +72,22 @@ export class AttendanceService {
     id: string,
     dto: UpdateAttendanceDto
   ): Promise<AttendanceRecord> {
-    const record = await this.findOne(id);
-    Object.assign(record, dto);
-    return this.attendanceRepo.save(record);
-  }
+    const existing = await this.attendanceRepo.findOne({
+      where: { id },
+      relations: ["activity", "user"],
+    });
 
-  async remove(id: string): Promise<void> {
-    const result = await this.attendanceRepo.delete(id);
-
-    if (result.affected === 0) {
-      throw new NotFoundException(`Attendance record with id ${id} not found`);
+    if (!existing) {
+      throw new NotFoundException(`Attendance record ${id} not found`);
     }
-  }
 
-  findByActivity(activityId: string): Promise<AttendanceRecord[]> {
-    return this.attendanceRepo.find({
-      where: { activityId },
-      relations: ["activity", "user"],
+    const updated = this.attendanceRepo.merge(existing, {
+      ...dto,
+      checkedInAt: dto.checkedInAt
+        ? new Date(dto.checkedInAt)
+        : existing.checkedInAt,
     });
-  }
 
-  findByUser(userId: string): Promise<AttendanceRecord[]> {
-    return this.attendanceRepo.find({
-      where: { userId },
-      relations: ["activity", "user"],
-    });
+    return this.attendanceRepo.save(updated);
   }
 }
