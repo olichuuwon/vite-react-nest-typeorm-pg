@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
-import { getUsers, type UserDto } from '../api/users'
+import { getUsers } from '../api/users'
 import { useAuth } from '../context/AuthContext'
+import type { UserDto } from './../../../shared/dto/user.dto'
 
 export const useUsers = () => {
   const { isAuthenticated } = useAuth()
