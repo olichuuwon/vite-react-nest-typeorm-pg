@@ -104,6 +104,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
 
   return (
     <AuthContext.Provider
+      // TODO: Add UseMemo?
       value={{
         user,
         token,
