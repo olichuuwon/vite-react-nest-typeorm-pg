@@ -157,7 +157,7 @@ describe("ActivityService", () => {
     // second findOne called by service.findOne(saved.id) at end of update
     repo.findOne.mockResolvedValueOnce(saved);
     // use TypeORM-like merge behaviour
-    (repo as any).merge = jest.fn((a: Activity, b: Partial<Activity>) => ({
+    repo.merge = jest.fn((a: Activity, b: Partial<Activity>) => ({
       ...a,
       ...b,
     }));
@@ -166,7 +166,7 @@ describe("ActivityService", () => {
     const result = await (service as any).update("abc", dto);
 
     expect(repo.findOne).toHaveBeenCalledWith({ where: { id: "abc" } });
-    expect((repo as any).merge).toHaveBeenCalled();
+    expect(repo.merge).toHaveBeenCalled();
     expect(repo.save).toHaveBeenCalledWith(saved);
     expect(result.title).toBe("New Title");
     expect(result.location).toBe("New HQ");
