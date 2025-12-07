@@ -98,7 +98,7 @@ describe("AttendanceService", () => {
       id: "new-id",
       userId: dto.userId,
       activityId: dto.activityId,
-      status: dto.status as any,
+      status: dto.status,
       remarks: dto.remarks,
       checkedInAt: new Date(),
       user: undefined as any,
