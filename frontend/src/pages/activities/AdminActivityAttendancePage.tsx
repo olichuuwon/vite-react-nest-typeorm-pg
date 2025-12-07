@@ -152,7 +152,7 @@ export const AdminActivityAttendancePage = () => {
           columns={columns}
           data={records}
           isLoading={isLoading}
-          error={error ? (error as Error).message : null}
+          error={error ? error.message : null}
           emptyText="No attendance records yet."
           getRowId={(row) => row.id}
           tableSize="sm"
