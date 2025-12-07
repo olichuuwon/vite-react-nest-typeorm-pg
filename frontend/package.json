@@ -25,6 +25,7 @@
     "react-router-dom": "^7.9.6"
   },
   "devDependencies": {
+    "@tanstack/react-query-devtools": "^5.91.1",
     "@types/node": "^24.10.0",
     "@types/react": "^18.3.27",
     "@types/react-dom": "^18.3.7",
