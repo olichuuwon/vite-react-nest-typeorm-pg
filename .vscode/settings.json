@@ -20,8 +20,9 @@
   "editor.renderWhitespace": "selection",
   "files.eol": "\n",
 
+  // For sonarlint
   "sonarlint.connectedMode.project": {
-    "connectionId": "olichuuwon-1olichuuwon-1",
+    "connectionId": "olichuuwon-1",
     "projectKey": "olichuuwon_vite-react-nest-typeorm-pg"
   }
 }
