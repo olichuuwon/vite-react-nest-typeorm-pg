@@ -1,17 +1,5 @@
 import { api } from './client'
-
-export type ActivityDto = {
-  id: string
-  title: string
-  description?: string | null
-  date?: string | null
-  startAt?: string | null
-  endAt?: string | null
-  location?: string | null
-  createdByUserId?: string | null
-  createdAt: string
-  updatedAt: string
-}
+import type { ActivityDto } from '../../../shared/dto/activity.dto'
 
 export async function getActivities(): Promise<ActivityDto[]> {
   const res = await api.get<ActivityDto[]>('/activities')
