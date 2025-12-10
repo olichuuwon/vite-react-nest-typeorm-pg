@@ -1,28 +1,19 @@
-import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { getActivities, type ActivityDto } from '../api/activities'
+import { useAuth } from '../context/AuthContext'
 
 export const useActivities = () => {
-  const [activities, setActivities] = useState<ActivityDto[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { isAuthenticated } = useAuth()
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        setIsLoading(true)
-        setError(null)
-        const data = await getActivities()
-        setActivities(data)
-      } catch (err) {
-        console.error(err)
-        setError('Failed to load activities')
-      } finally {
-        setIsLoading(false)
-      }
-    }
+  const { data, isLoading, error } = useQuery<ActivityDto[]>({
+    queryKey: ['activities'],
+    queryFn: getActivities,
+    enabled: isAuthenticated,
+  })
 
-    load()
-  }, [])
-
-  return { activities, isLoading, error }
+  return {
+    activities: data ?? [],
+    isLoading,
+    error,
+  }
 }
