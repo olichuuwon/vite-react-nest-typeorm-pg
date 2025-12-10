@@ -91,9 +91,9 @@ describe("Activities CRUD e2e", () => {
     expect(res.body.title).toBe("Morning PT");
   });
 
-  it("PUT /activities/:id should update fields", async () => {
+  it("PATCH /activities/:id should update fields", async () => {
     const res = await request(httpServer)
-      .put(`/activities/${activityId}`)
+      .patch(`/activities/${activityId}`)
       .set("Authorization", `Bearer ${adminToken}`)
       .send({ title: "Morning PT (Updated)", location: "Gym" });
 
