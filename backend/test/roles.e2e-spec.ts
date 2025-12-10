@@ -84,17 +84,17 @@ describe("Role-based access e2e", () => {
     expect([401, 403]).toContain(res.status);
   });
 
-  it("member should NOT be able to create activities", async () => {
+  it("member SHOULD be able to create activities", async () => {
     const res = await request(httpServer)
       .post("/activities")
       .set("Authorization", `Bearer ${memberToken}`)
       .send({
-        title: "Illegal Activity",
+        title: "Member Created Activity",
         location: "Somewhere",
-        createdByUserId: memberUser.id,
-      });
+              });
 
-    expect([401, 403]).toContain(res.status);
+    expect([200, 201]).toContain(res.status);
+expect(res.body.title).toBe("Member Created Activity");
   });
 
   it("member should NOT be able to mark attendance for another user", async () => {
