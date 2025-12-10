@@ -1,17 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
-import { getAttendanceByUser, type AttendanceRecordDto } from '../api/attendance'
-import { useAuth } from '../context/AuthContext'
+import type { AttendanceRecordDto } from '../../../shared/dto/attendance.dto'
+import { getAttendanceByUser } from '../api/attendance'
 
-export const useUserAttendance = (userId: string | undefined) => {
-  const { isAuthenticated } = useAuth()
-
+export const useUserAttendance = (userId?: string) => {
   const { data, isLoading, error } = useQuery<AttendanceRecordDto[]>({
     queryKey: ['attendance', 'byUser', userId],
-    enabled: isAuthenticated && !!userId,
-    queryFn: () => {
-      if (!userId) {
-        return Promise.reject(new Error('No userId provided'))
-      }
+    enabled: !!userId,
+    queryFn: async () => {
+      if (!userId) return []
       return getAttendanceByUser(userId)
     },
   })
@@ -19,6 +15,6 @@ export const useUserAttendance = (userId: string | undefined) => {
   return {
     records: data ?? [],
     isLoading,
-    error,
+    error: error ?? null,
   }
 }

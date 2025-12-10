@@ -18,5 +18,11 @@
 
   // Remove unused imports & vars automatically
   "editor.renderWhitespace": "selection",
-  "files.eol": "\n"
+  "files.eol": "\n",
+
+  // For sonarlint
+  "sonarlint.connectedMode.project": {
+    "connectionId": "olichuuwon-1",
+    "projectKey": "olichuuwon_vite-react-nest-typeorm-pg"
+  }
 }

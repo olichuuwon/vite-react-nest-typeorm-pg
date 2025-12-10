@@ -38,7 +38,7 @@ export function DataTable<TData extends object>({
   emptyText = 'No records found.',
   getRowId,
   tableSize = 'sm',
-}: DataTableProps<TData>) {
+}: Readonly<DataTableProps<TData>>) {
   const [sorting, setSorting] = useState<SortingState>([])
 
   const table = useReactTable<TData>({

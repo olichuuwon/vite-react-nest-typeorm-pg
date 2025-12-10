@@ -10,7 +10,6 @@ const createMockRepo = () =>
     create: jest.fn(),
     save: jest.fn(),
     delete: jest.fn(),
-    remove: jest.fn(),
   }) as any;
 
 describe("ActivityService", () => {
@@ -74,7 +73,7 @@ describe("ActivityService", () => {
 
     expect(repo.findOne).toHaveBeenCalledWith({
       where: { id: "abc" },
-      relations: ["createdBy", "attendanceRecords"],
+      relations: ["createdBy"],
     });
     expect(result).toBe(activity);
   });
@@ -86,30 +85,48 @@ describe("ActivityService", () => {
       NotFoundException
     );
   });
+
   it("create should persist a new activity", async () => {
     const dto = { title: "New Activity" } as any;
     const user = { id: "user-1" } as any;
 
-    const created = {
+    const created: Activity = {
       id: "activity-1",
-      ...dto,
+      title: dto.title,
+      description: dto.description,
+      date: dto.date,
+      startAt: undefined,
+      endAt: undefined,
+      location: dto.location,
       createdByUserId: user.id,
-    } as any;
+      attendanceRecords: [],
+      createdAt: undefined as any,
+      updatedAt: undefined as any,
+      createdBy: undefined as any,
+    };
 
+    // service.create -> repo.create -> repo.save -> service.findOne(saved.id)
     repo.create.mockReturnValue(created);
     repo.save.mockResolvedValue(created);
+    repo.findOne.mockResolvedValue(created);
 
-    const result = await service.create(dto as any, user as any);
+    const result = await service.create(dto, user);
 
-    expect(repo.create).toHaveBeenCalledWith({
-      ...dto,
-      createdByUserId: user.id,
-    });
+    expect(repo.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "New Activity",
+        createdByUserId: "user-1",
+      })
+    );
     expect(repo.save).toHaveBeenCalledWith(created);
+    expect(repo.findOne).toHaveBeenCalledWith({
+      where: { id: "activity-1" },
+      relations: ["createdBy"],
+    });
     expect(result).toBe(created);
   });
 
-  it("update should merge and save existing activity", async () => {
+  it("update should update an existing activity", async () => {
     const existing: Activity = {
       id: "abc",
       title: "Old Title",
@@ -130,18 +147,27 @@ describe("ActivityService", () => {
       location: "New HQ",
     } as any;
 
-    const updated: Activity = {
+    const saved: Activity = {
       ...existing,
       ...dto,
     };
 
-    repo.findOne.mockResolvedValue(existing);
-    repo.save.mockResolvedValue(updated);
+    // first findOne inside update
+    repo.findOne.mockResolvedValueOnce(existing);
+    // second findOne called by service.findOne(saved.id) at end of update
+    repo.findOne.mockResolvedValueOnce(saved);
+    // use TypeORM-like merge behaviour
+    repo.merge = jest.fn((a: Activity, b: Partial<Activity>) => ({
+      ...a,
+      ...b,
+    }));
+    repo.save.mockResolvedValue(saved);
 
-    const result = await service.update("abc", dto);
+    const result = await (service as any).update("abc", dto);
 
-    expect(repo.findOne).toHaveBeenCalled();
-    expect(repo.save).toHaveBeenCalledWith(updated);
+    expect(repo.findOne).toHaveBeenCalledWith({ where: { id: "abc" } });
+    expect(repo.merge).toHaveBeenCalled();
+    expect(repo.save).toHaveBeenCalledWith(saved);
     expect(result.title).toBe("New Title");
     expect(result.location).toBe("New HQ");
   });
@@ -150,35 +176,19 @@ describe("ActivityService", () => {
     repo.findOne.mockResolvedValue(null);
 
     await expect(
-      service.update("missing-id", { title: "X" } as any)
+      (service as any).update("missing-id", { title: "X" } as any)
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
-  it("remove should delete an activity", async () => {
-    const existing: Activity = {
-      id: "abc",
-      title: "To delete",
-      description: "x",
-      date: undefined,
-      startAt: undefined,
-      endAt: undefined,
-      location: "HQ",
-      createdByUserId: "u1",
-      attendanceRecords: [],
-      createdAt: undefined as any,
-      updatedAt: undefined as any,
-      createdBy: undefined as any,
-    };
-
-    repo.findOne.mockResolvedValue(existing);
-    repo.remove.mockResolvedValue(existing);
+  it("remove should delete activity when found", async () => {
+    repo.delete.mockResolvedValue({ affected: 1 } as any);
 
     await expect(service.remove("abc")).resolves.not.toThrow();
-    expect(repo.remove).toHaveBeenCalledWith(existing);
+    expect(repo.delete).toHaveBeenCalledWith("abc");
   });
 
-  it("remove should throw NotFoundException if activity not found", async () => {
-    repo.findOne.mockResolvedValue(null);
+  it("remove should throw NotFoundException if nothing deleted", async () => {
+    repo.delete.mockResolvedValue({ affected: 0 } as any);
 
     await expect(service.remove("missing-id")).rejects.toBeInstanceOf(
       NotFoundException

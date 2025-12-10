@@ -3,7 +3,6 @@ import { UserService } from "./user.service";
 import { getRepositoryToken } from "@nestjs/typeorm";
 import { User } from "./user.entity";
 import { Repository } from "typeorm";
-import { createMockUser } from "../test-utils/entities";
 
 const mockRepo = () => ({
   find: jest.fn(),
@@ -11,6 +10,18 @@ const mockRepo = () => ({
   create: jest.fn(),
   save: jest.fn(),
   delete: jest.fn(),
+});
+
+const createMockUser = (override: Partial<User> = {}): User => ({
+  id: override.id ?? "user-1",
+  name: override.name ?? "Test User",
+  identifier: override.identifier ?? "test-user-1",
+  email: override.email ?? undefined,
+  role: override.role ?? "member",
+  attendanceRecords: override.attendanceRecords ?? [],
+  createdActivities: override.createdActivities ?? [],
+  createdAt: override.createdAt ?? new Date("2025-01-01T00:00:00.000Z"),
+  updatedAt: override.updatedAt ?? new Date("2025-01-01T00:00:00.000Z"),
 });
 
 describe("UserService", () => {

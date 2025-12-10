@@ -18,7 +18,6 @@ describe("Role-based access e2e", () => {
   let memberUser: User;
   let activity: Activity;
 
-  let adminToken: string;
   let memberToken: string;
 
   beforeAll(async () => {
@@ -60,10 +59,7 @@ describe("Role-based access e2e", () => {
       })
     );
 
-    const adminLogin = await request(httpServer)
-      .post("/auth/login")
-      .send({ identifier: "admin" });
-    adminToken = adminLogin.body.accessToken;
+    await request(httpServer).post("/auth/login").send({ identifier: "admin" });
 
     const memberLogin = await request(httpServer)
       .post("/auth/login")

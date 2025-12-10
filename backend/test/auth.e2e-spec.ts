@@ -48,7 +48,7 @@ describe("Auth e2e", () => {
     await userRepo.createQueryBuilder().delete().from(User).execute();
 
     // Seed admin user
-    adminUser = await userRepo.save(
+    await userRepo.save(
       userRepo.create({
         name: "Admin User",
         identifier: "admin",
