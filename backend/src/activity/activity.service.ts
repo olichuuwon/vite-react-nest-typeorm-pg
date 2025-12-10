@@ -1,16 +1,23 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { Activity } from "./activity.entity";
 import { CreateActivityDto } from "./dto/create-activity.dto";
 import { UpdateActivityDto } from "./dto/update-activity.dto";
+import { AttendanceRecord } from "../attendance/attendance.entity";
 import type { User } from "../user/user.entity";
 
 @Injectable()
 export class ActivityService {
   constructor(
     @InjectRepository(Activity)
-    private readonly activityRepo: Repository<Activity>
+    private readonly activityRepo: Repository<Activity>,
+    @InjectRepository(AttendanceRecord)
+    private readonly attendanceRepo: Repository<AttendanceRecord>
   ) {}
 
   async findAll(filter?: { createdByUserId?: string }): Promise<Activity[]> {
@@ -75,10 +82,23 @@ export class ActivityService {
   }
 
   async remove(id: string): Promise<void> {
-    const result = await this.activityRepo.delete(id);
-
-    if (result.affected === 0) {
+    // Check if activity exists
+    const activity = await this.activityRepo.findOne({ where: { id } });
+    if (!activity) {
       throw new NotFoundException(`Activity with id ${id} not found`);
     }
+
+    // Check if activity has attendance records
+    const attendanceCount = await this.attendanceRepo.count({
+      where: { activityId: id },
+    });
+
+    if (attendanceCount > 0) {
+      throw new ConflictException(
+        `Cannot delete activity with ${attendanceCount} attendance record(s). Delete attendance records first.`
+      );
+    }
+
+    await this.activityRepo.delete(id);
   }
 }
