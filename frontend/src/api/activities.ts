@@ -32,3 +32,7 @@ export async function updateActivity(id: string, data: Partial<ActivityDto>): Pr
   const res = await api.patch<ActivityDto>(`/activities/${id}`, data)
   return res.data
 }
+
+export async function deleteActivity(id: string): Promise<void> {
+  await api.delete(`/activities/${id}`)
+}
