@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { AttendanceRecord } from "./attendance.entity";
@@ -65,7 +69,42 @@ export class AttendanceService {
       checkedInAt: dto.checkedInAt ? new Date(dto.checkedInAt) : now,
     });
 
-    return this.attendanceRepo.save(record);
+    try {
+      return await this.attendanceRepo.save(record);
+    } catch (error: any) {
+      // Handle foreign key violations (23503)
+      if (error.code === "23503") {
+        const detail = error.detail || "";
+        if (
+          detail.includes("userId") &&
+          detail.includes('not present in table "users"')
+        ) {
+          throw new NotFoundException(`User with id ${dto.userId} not found`);
+        }
+        if (
+          detail.includes("activityId") &&
+          detail.includes('not present in table "activities"')
+        ) {
+          throw new NotFoundException(
+            `Activity with id ${dto.activityId} not found`
+          );
+        }
+      }
+      // Handle duplicate attendance (23505)
+      if (error.code === "23505") {
+        const detail = error.detail || "";
+        if (
+          detail.includes("activityId") &&
+          detail.includes("userId") &&
+          detail.includes("already exists")
+        ) {
+          throw new ConflictException(
+            `Attendance already recorded for this user and activity`
+          );
+        }
+      }
+      throw error;
+    }
   }
 
   async update(
