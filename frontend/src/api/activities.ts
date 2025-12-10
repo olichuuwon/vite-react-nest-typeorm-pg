@@ -27,3 +27,8 @@ export async function createActivity(data: {
   const res = await api.post<ActivityDto>('/activities', data)
   return res.data
 }
+
+export async function updateActivity(id: string, data: Partial<ActivityDto>): Promise<ActivityDto> {
+  const res = await api.patch<ActivityDto>(`/activities/${id}`, data)
+  return res.data
+}
