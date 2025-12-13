@@ -84,39 +84,49 @@ describe("Role-based access e2e", () => {
     expect([401, 403]).toContain(res.status);
   });
 
-  it("member should NOT be able to create activities", async () => {
+  it("member SHOULD be able to create activities", async () => {
     const res = await request(httpServer)
       .post("/activities")
       .set("Authorization", `Bearer ${memberToken}`)
       .send({
-        title: "Illegal Activity",
+        title: "Member Created Activity",
         location: "Somewhere",
-        createdByUserId: memberUser.id,
       });
 
-    expect([401, 403]).toContain(res.status);
+    expect([200, 201]).toContain(res.status);
+    expect(res.body.title).toBe("Member Created Activity");
   });
 
-  it("member should NOT be able to mark attendance for another user", async () => {
+  it("member marking attendance will use their OWN userId (even if they pass different userId)", async () => {
     const res = await request(httpServer)
       .post("/attendance")
       .set("Authorization", `Bearer ${memberToken}`)
       .send({
-        userId: adminUser.id, // try to mark admin's attendance
+        userId: adminUser.id, // controller will ignore this and use memberUser.id
         activityId: activity.id,
         status: "present",
       });
 
-    expect([401, 403]).toContain(res.status);
+    expect([200, 201]).toContain(res.status);
+    expect(res.body.userId).toBe(memberUser.id); // forced to member's own id
   });
 
   it("member SHOULD be able to mark their OWN attendance", async () => {
+    // Create a new activity to avoid duplicate attendance
+    const newActivity = await activityRepo.save(
+      activityRepo.create({
+        title: "Another Activity",
+        location: "There",
+        createdByUserId: adminUser.id,
+      })
+    );
+
     const res = await request(httpServer)
       .post("/attendance")
       .set("Authorization", `Bearer ${memberToken}`)
       .send({
         userId: memberUser.id,
-        activityId: activity.id,
+        activityId: newActivity.id,
         status: "present",
       });
 
