@@ -1,4 +1,4 @@
-# 📘 Attendance Tracker
+# 📘 Attendance Tracking
 
 _A lightweight activity & attendance tracking system for training, units, and admin management._
 
