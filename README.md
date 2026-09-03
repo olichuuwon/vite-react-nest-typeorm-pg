@@ -1,4 +1,4 @@
-# 📘 Trackr Lite
+# 📘 Attendance Tracker
 
 _A lightweight activity & attendance tracking system for training, units, and admin management._
 
